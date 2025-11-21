@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <title>좌석 상태 데모1</title>
+    <title>좌석 상태 데모</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <style>
@@ -47,6 +47,12 @@
             color: #c62828;
         }
 
+        .ban {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #b71c1c;
+        }
+
         .out-info {
             font-size: 12px;
             color: #555;
@@ -86,6 +92,7 @@
     <div id="seat-title" class="seat-title">좌석</div>
     <div id="status" class="status">현재 상태: <span>알 수 없음</span></div>
     <div id="warning" class="warning"></div>
+    <div id="ban" class="ban"></div>
     <div id="out-info" class="out-info"></div>
 
     <div class="buttons">
@@ -100,17 +107,17 @@
 </div>
 
 <script>
-    // URL 파라미터에서 좌석 번호 읽기 (?seat=12)
     const params = new URLSearchParams(window.location.search);
     const seat = params.get("seat");
 
     const seatTitleEl = document.getElementById("seat-title");
-    const statusEl    = document.getElementById("status");
-    const warningEl   = document.getElementById("warning");
-    const outInfoEl   = document.getElementById("out-info");
+    const statusEl = document.getElementById("status");
+    const warningEl = document.getElementById("warning");
+    const banEl = document.getElementById("ban");
+    const outInfoEl = document.getElementById("out-info");
 
-    const btnIn    = document.getElementById("btn-in");
-    const btnOut   = document.getElementById("btn-out");
+    const btnIn = document.getElementById("btn-in");
+    const btnOut = document.getElementById("btn-out");
     const btnLeave = document.getElementById("btn-leave");
 
     if (!seat) {
@@ -122,44 +129,53 @@
     } else {
         seatTitleEl.textContent = seat + "번 좌석";
 
-        const key = "seat_" + seat; // localStorage key
+        const key = "seat_" + seat;
 
-        // 저장 데이터 구조: { status: "입실/외출/퇴실", warnings: number, lastOutTime: number|null }
         let data;
         try {
             data = JSON.parse(localStorage.getItem(key)) || {};
-        } catch (e) {
+        } catch {
             data = {};
         }
 
-        if (!data.status)   data.status = "퇴실";
+        if (!data.status) data.status = "퇴실";
         if (typeof data.warnings !== "number") data.warnings = 0;
         if (!("lastOutTime" in data)) data.lastOutTime = null;
+        if (!("bannedUntil" in data)) data.bannedUntil = null;
 
         function save() {
             localStorage.setItem(key, JSON.stringify(data));
         }
 
         function formatDate(ts) {
-            if (!ts) return "";
             return new Date(ts).toLocaleString();
+        }
+
+        function isBanned() {
+            return data.bannedUntil && Date.now() < data.bannedUntil;
         }
 
         function render() {
             const span = statusEl.querySelector("span");
             span.textContent = data.status;
+            span.className = "";
 
-            span.classList.remove("status-in", "status-out", "status-end");
-
-            if (data.status === "입실") {
-                span.classList.add("status-in");
-            } else if (data.status === "외출") {
-                span.classList.add("status-out");
-            } else {
-                span.classList.add("status-end");
-            }
+            if (data.status === "입실") span.classList.add("status-in");
+            else if (data.status === "외출") span.classList.add("status-out");
+            else span.classList.add("status-end");
 
             warningEl.textContent = "경고 횟수: " + data.warnings;
+
+            if (isBanned()) {
+                banEl.textContent = 
+                    "⚠ 사용 금지: " + formatDate(data.bannedUntil) + "까지";
+                btnIn.disabled = true;
+                btnOut.disabled = true;
+            } else {
+                banEl.textContent = "";
+                btnIn.disabled = false;
+                btnOut.disabled = false;
+            }
 
             if (data.status === "외출" && data.lastOutTime) {
                 outInfoEl.textContent = "외출 시작 시각: " + formatDate(data.lastOutTime);
@@ -168,36 +184,56 @@
             }
         }
 
-        // 입실 버튼: 외출 → 입실로 돌아올 때 시간 차 계산
         btnIn.addEventListener("click", () => {
+            if (isBanned()) {
+                alert("현재 사용 금지 상태입니다.");
+                return;
+            }
+
             const now = Date.now();
 
             if (data.status === "외출" && data.lastOutTime) {
-                const diffMs  = now - data.lastOutTime;
-                const diffHr  = diffMs / (1000 * 60 * 60);
+                const diffMs = now - data.lastOutTime;
+                const diffHr = diffMs / (1000 * 60 * 60);
 
-                if (diffHr >= 1/600) {
-                    data.warnings += 1;
-                    alert("외출 시간이 3시간을 초과했습니다.\n경고 1회를 부여합니다.");
+                if (diffHr >= 3) {
+                    data.warnings++;
+
+                    alert("외출이 3시간 이상이었습니다.\n경고 1회 추가.");
+
+                    // 경고 3회 → 2주 금지
+                    if (data.warnings >= 3) {
+                        data.warnings = 0;
+                        data.bannedUntil = now + 14 * 24 * 60 * 60 * 1000; // 2주
+                        data.status = "퇴실";
+                        data.lastOutTime = null;
+
+                        save();
+                        render();
+                        alert("경고 3회 누적 → 2주 사용 금지.");
+                        return;
+                    }
                 }
-                data.lastOutTime = null;
             }
 
             data.status = "입실";
+            data.lastOutTime = null;
             save();
             render();
         });
 
-        // 외출 버튼: 현재 시각 저장
         btnOut.addEventListener("click", () => {
-            const now = Date.now();
+            if (isBanned()) {
+                alert("현재 사용 금지 상태입니다.");
+                return;
+            }
+
             data.status = "외출";
-            data.lastOutTime = now;
+            data.lastOutTime = Date.now();
             save();
             render();
         });
 
-        // 퇴실 버튼: 상태만 초기화 (외출 시간도 초기화)
         btnLeave.addEventListener("click", () => {
             data.status = "퇴실";
             data.lastOutTime = null;
