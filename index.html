@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <title>좌석 상태 데모</title>
+    <title>스마트 좌석 관리 시스템</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <style>
@@ -37,18 +37,36 @@
         .status span {
             font-weight: 700;
         }
-        .status-enter { color: #2e7d32; }
-        .status-out { color: #f9a825; }
-        .status-leave { color: #c62828; }
-
+        .status-enter { color: #2e7d32; } /* 입실: 녹색 */
+        .status-out { color: #f9a825; }   /* 외출: 노랑 */
+        
         .student-line {
             font-size: 16px;
             margin-top: 4px;
             border-top: 1px solid #ddd;
             padding-top: 8px;
+            margin-bottom: 12px;
         }
-        .student-line span {
-            font-weight: 600;
+        .student-line span { font-weight: 600; color: #333; }
+
+        .timer-box {
+            background: #ffebee;
+            color: #c62828;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            display: none; /* 외출 시에만 보임 */
+        }
+
+        .warning-box {
+            font-size: 13px;
+            color: #d32f2f;
+            margin-bottom: 10px;
+            background: #fff3e0;
+            padding: 6px;
+            border-radius: 4px;
+            display: none;
         }
 
         .btn-row {
@@ -63,9 +81,12 @@
             border-radius: 8px;
             border: none;
             cursor: pointer;
+            transition: background 0.2s;
         }
         .btn-primary { background: #1976d2; color: #fff; }
-        .btn-secondary { background: #eeeeee; }
+        .btn-secondary { background: #eeeeee; color: #333; }
+        .btn-danger { background: #d32f2f; color: #fff; }
+        .btn-test { background: #666; color: #fff; font-size: 11px; margin-top: 20px; }
 
         #idInput {
             width: 100%;
@@ -82,134 +103,331 @@
             font-size: 11px;
             color: #666;
         }
-
         .error {
             color: #c62828;
             font-size: 14px;
             margin-top: 8px;
+            display: none;
         }
     </style>
 </head>
 <body>
 
-<!-- 1) 학번 입력 화면 -->
 <div class="card" id="id-card">
     <div id="seat-title-form" class="seat-title">좌석 정보 불러오는 중...</div>
-
     <input id="idInput" type="text" placeholder="학번을 입력하세요" />
-    <button id="idSubmit" class="btn-primary">확인</button>
-
-    <div id="idError" class="error" style="display:none;"></div>
-
-    <div class="info">이 학번과 좌석 상태는 이 기기(브라우저)에만 저장됩니다.</div>
+    <button id="idSubmit" class="btn-primary">로그인 / 좌석 배정</button>
+    <div id="idError" class="error"></div>
+    <div class="info">학번을 입력하면 해당 학생의 대시보드로 이동합니다.</div>
 </div>
 
-<!-- 2) 좌석 화면 -->
 <div class="card" id="seat-card" style="display:none;">
     <div id="seat-title" class="seat-title"></div>
 
-    <div id="student-line" class="student-line">
-        학번: <span id="student-id-text">-</span>
+    <div class="student-line">
+        사용자: <span id="student-id-text">-</span>
     </div>
 
-    <div id="status" class="status">상태: <span>미설정</span></div>
+    <div id="warning-display" class="warning-box">
+        ⚠️ 누적 경고: <span id="warning-count">0</span>회 (3회시 2주 정지)
+    </div>
+
+    <div id="status" class="status">상태: <span>입실 중</span></div>
+
+    <div id="out-timer-box" class="timer-box">
+        외출 시간: <span id="timer-text">00:00:00</span>
+        <div style="font-size:11px; font-weight:normal; margin-top:4px;">(3시간 초과 시 경고 1회)</div>
+    </div>
 
     <div class="btn-row">
-        <button class="btn-secondary" data-status="입실">입실</button>
-        <button class="btn-secondary" data-status="외출">외출</button>
-        <button class="btn-secondary" data-status="퇴실">퇴실</button>
+        <div id="controls-in" style="display:block;">
+            <button class="btn-secondary" id="btn-go-out">외출 하기</button>
+            <button class="btn-danger" id="btn-leave">퇴실 (사용 종료)</button>
+        </div>
+        
+        <div id="controls-out" style="display:none;">
+            <button class="btn-primary" id="btn-return">복귀 (외출 종료)</button>
+            <button class="btn-danger" id="btn-leave-out">바로 퇴실</button>
+        </div>
     </div>
 
-    <div class="info">좌석/학번/상태는 이 기기에서만 기억됩니다.</div>
+    <button id="btn-test-add-time" class="btn-test">[테스트] 외출 시간 +3시간 추가</button>
+
+    <div class="info">퇴실 시 초기 화면으로 돌아갑니다.</div>
 </div>
 
 <script>
-    const params = new URLSearchParams(window.location.search);
-    const seat = params.get("seat");
+    // --- 상수 및 설정 ---
+    const WARNING_LIMIT_MS = 3 * 60 * 60 * 1000; // 3시간 (밀리초)
+    // const WARNING_LIMIT_MS = 5000; // 테스트용: 5초
+    const BAN_DURATION_MS = 14 * 24 * 60 * 60 * 1000; // 2주 (밀리초)
 
+    // URL 파라미터 확인 (?seat=1)
+    const params = new URLSearchParams(window.location.search);
+    const seatNum = params.get("seat");
+
+    // DOM 요소
     const idCard = document.getElementById("id-card");
     const seatCard = document.getElementById("seat-card");
-
+    const idInputEl = document.getElementById("idInput");
+    const idErrorEl = document.getElementById("idError");
     const seatTitleFormEl = document.getElementById("seat-title-form");
     const seatTitleEl = document.getElementById("seat-title");
+    
+    // 대시보드 요소
     const studentIdTextEl = document.getElementById("student-id-text");
-    const statusEl = document.getElementById("status").querySelector("span");
+    const warningCountEl = document.getElementById("warning-count");
+    const statusTextEl = document.querySelector("#status span");
+    const timerBox = document.getElementById("out-timer-box");
+    const timerText = document.getElementById("timer-text");
+    const warningDisplay = document.getElementById("warning-display");
 
-    const idInputEl = document.getElementById("idInput");
-    const idSubmitBtn = document.getElementById("idSubmit");
-    const idErrorEl = document.getElementById("idError");
+    // 컨트롤 버튼 그룹
+    const controlsIn = document.getElementById("controls-in");
+    const controlsOut = document.getElementById("controls-out");
 
-    if (!seat) {
-        seatTitleFormEl.textContent = "좌석 정보가 없습니다";
+    // 상태 변수
+    let currentId = "";
+    let timerInterval = null;
+
+    // --- 초기화 로직 ---
+    if (!seatNum) {
+        seatTitleFormEl.textContent = "좌석 번호 오류";
         idErrorEl.style.display = "block";
-        idErrorEl.textContent = "URL에 ?seat=번호 가 필요합니다.";
-        idSubmitBtn.disabled = true;
+        idErrorEl.textContent = "URL에 ?seat=번호 형식이 필요합니다.";
+        document.getElementById("idSubmit").disabled = true;
     } else {
-        const seatLabel = seat + "번 좌석";
+        seatTitleFormEl.textContent = `${seatNum}번 좌석 로그인`;
+        seatTitleEl.textContent = `${seatNum}번 좌석 관리`;
 
-        seatTitleFormEl.textContent = seatLabel;
-        seatTitleEl.textContent = seatLabel;
-
-        const idKey = "seat_" + seat + "_studentId";
-        const statusKey = "seat_" + seat + "_status";
-
-        let currentId = localStorage.getItem(idKey) || "";
-        let currentStatus = localStorage.getItem(statusKey) || "미설정";
-
-        function renderStatus() {
-            statusEl.textContent = currentStatus;
-            statusEl.classList.remove("status-enter", "status-out", "status-leave");
-
-            if (currentStatus === "입실") statusEl.classList.add("status-enter");
-            else if (currentStatus === "외출") statusEl.classList.add("status-out");
-            else if (currentStatus === "퇴실") statusEl.classList.add("status-leave");
+        // 페이지 로드 시, 이미 로그인된 상태인지 확인 (새로고침 대응)
+        const savedId = localStorage.getItem(`seat_${seatNum}_studentId`);
+        if (savedId) {
+            login(savedId);
         }
-
-        function showSeatCard() {
-            studentIdTextEl.textContent = currentId || "-";
-            renderStatus();
-            idCard.style.display = "none";
-            seatCard.style.display = "block";
-        }
-
-        if (currentId) {
-            showSeatCard();
-        }
-
-        idSubmitBtn.addEventListener("click", () => {
-            const idVal = idInputEl.value.trim();
-            if (!idVal) {
-                idErrorEl.style.display = "block";
-                idErrorEl.textContent = "학번을 입력해주세요.";
-                return;
-            }
-            idErrorEl.style.display = "none";
-
-            currentId = idVal;
-            localStorage.setItem(idKey, currentId);
-
-            showSeatCard();
-        });
-
-        // ★ 상태 버튼 처리 (퇴실 = 학번 삭제 기능 포함)
-        document.querySelectorAll(".btn-row button").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const s = btn.getAttribute("data-status");
-
-                currentStatus = s;
-                localStorage.setItem(statusKey, currentStatus);
-
-                // ★ 퇴실일 때 학번 초기화
-                if (s === "퇴실") {
-                    currentId = "";
-                    localStorage.removeItem(idKey);
-                    studentIdTextEl.textContent = "-";
-                }
-
-                renderStatus();
-            });
-        });
     }
+
+    // --- 이벤트 리스너 ---
+
+    // 1. 로그인 (학번 입력)
+    document.getElementById("idSubmit").addEventListener("click", () => {
+        const inputId = idInputEl.value.trim();
+        if (!inputId) {
+            showError("학번을 입력해주세요.");
+            return;
+        }
+
+        // 정지(Ban) 여부 확인
+        const banInfo = getStudentBanInfo(inputId); // { isBanned: bool, date: string }
+        if (banInfo.isBanned) {
+            showError(`해당 학번은 이용이 정지되었습니다.\n해제일: ${banInfo.date}`);
+            return;
+        }
+
+        // 로그인 처리
+        localStorage.setItem(`seat_${seatNum}_studentId`, inputId);
+        login(inputId);
+    });
+
+    // 2. 외출 버튼
+    document.getElementById("btn-go-out").addEventListener("click", () => {
+        setOutStatus();
+    });
+
+    // 3. 복귀 버튼 (외출 끝)
+    document.getElementById("btn-return").addEventListener("click", () => {
+        checkOutDurationAndProcess(); // 시간 체크 후 경고 부여 판단
+        setInStatus(); // 입실 상태로 변경
+    });
+
+    // 4. 퇴실 버튼 (입실 중 퇴실)
+    document.getElementById("btn-leave").addEventListener("click", () => {
+        logout();
+    });
+
+    // 5. 외출 중 퇴실 (바로 퇴실)
+    document.getElementById("btn-leave-out").addEventListener("click", () => {
+        checkOutDurationAndProcess(); // 외출 시간 체크 (경고 부여 가능)
+        logout();
+    });
+
+    // 6. [테스트용] 3시간 추가 버튼
+    document.getElementById("btn-test-add-time").addEventListener("click", () => {
+        const outStartKey = `seat_${seatNum}_outStartTime`;
+        let startTime = parseInt(localStorage.getItem(outStartKey));
+        if (startTime) {
+            // 시작 시간을 3시간 1분 전으로 돌림
+            const newStartTime = startTime - (3 * 60 * 60 * 1000) - (60 * 1000);
+            localStorage.setItem(outStartKey, newStartTime);
+            alert("테스트: 외출 시작 시간을 3시간 전으로 변경했습니다.");
+        } else {
+            alert("외출 상태가 아닙니다.");
+        }
+    });
+
+
+    // --- 핵심 기능 함수 ---
+
+    function login(id) {
+        currentId = id;
+        idInputEl.value = ""; // 입력창 초기화
+        idErrorEl.style.display = "none";
+        
+        // 화면 전환
+        idCard.style.display = "none";
+        seatCard.style.display = "block";
+        studentIdTextEl.textContent = currentId;
+
+        // 학생 경고 횟수 로드
+        updateWarningDisplay();
+
+        // 현재 상태 복구 (입실 중인지 외출 중인지)
+        const savedStatus = localStorage.getItem(`seat_${seatNum}_status`) || "입실";
+        if (savedStatus === "외출") {
+            resumeOutStatus();
+        } else {
+            setInStatus(false); // false = 상태 저장 없이 UI만 갱신
+        }
+    }
+
+    function logout() {
+        // 데이터 초기화
+        localStorage.removeItem(`seat_${seatNum}_studentId`);
+        localStorage.removeItem(`seat_${seatNum}_status`);
+        localStorage.removeItem(`seat_${seatNum}_outStartTime`);
+        
+        if (timerInterval) clearInterval(timerInterval);
+        currentId = "";
+
+        // 화면 전환 (첫 화면으로)
+        seatCard.style.display = "none";
+        idCard.style.display = "block";
+        alert("퇴실 처리되었습니다. 안녕히 가세요!");
+    }
+
+    // 상태 변경: 입실(복귀)
+    function setInStatus(save = true) {
+        if(save) localStorage.setItem(`seat_${seatNum}_status`, "입실");
+        localStorage.removeItem(`seat_${seatNum}_outStartTime`); // 타이머 시작 시간 삭제
+        
+        statusTextEl.textContent = "입실 중";
+        statusTextEl.className = "status-enter";
+        
+        controlsIn.style.display = "block";
+        controlsOut.style.display = "none";
+        timerBox.style.display = "none";
+        
+        if (timerInterval) clearInterval(timerInterval);
+    }
+
+    // 상태 변경: 외출 시작
+    function setOutStatus() {
+        const now = Date.now();
+        localStorage.setItem(`seat_${seatNum}_status`, "외출");
+        localStorage.setItem(`seat_${seatNum}_outStartTime`, now);
+
+        resumeOutStatus();
+    }
+
+    // 외출 상태 UI 및 타이머 가동
+    function resumeOutStatus() {
+        statusTextEl.textContent = "외출 중";
+        statusTextEl.className = "status-out";
+
+        controlsIn.style.display = "none";
+        controlsOut.style.display = "block";
+        timerBox.style.display = "block";
+
+        // 타이머 시작
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(updateTimer, 1000);
+        updateTimer(); // 즉시 실행
+    }
+
+    // 타이머 업데이트 (1초마다 실행)
+    function updateTimer() {
+        const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_outStartTime`));
+        if (!startTime) return;
+
+        const now = Date.now();
+        const diff = now - startTime;
+
+        // 시:분:초 계산
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        const fmt = (n) => n.toString().padStart(2, '0');
+        timerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
+        
+        // 3시간 넘으면 빨간색 강조
+        if (diff > WARNING_LIMIT_MS) {
+            timerText.style.color = "red";
+            timerText.style.fontWeight = "900";
+        } else {
+            timerText.style.color = "#c62828";
+        }
+    }
+
+    // 외출 시간 체크 및 경고 부여 로직
+    function checkOutDurationAndProcess() {
+        const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_outStartTime`));
+        if (!startTime) return;
+
+        const now = Date.now();
+        const diff = now - startTime;
+
+        // 3시간 초과 시
+        if (diff > WARNING_LIMIT_MS) {
+            addWarning(currentId);
+        }
+    }
+
+    // --- 학생 데이터 관리 (경고/정지) ---
+    // 로컬스토리지 키: student_{학번}_warnings, student_{학번}_banDate
+
+    function getStudentBanInfo(id) {
+        const banDateStr = localStorage.getItem(`student_${id}_banDate`);
+        if (banDateStr) {
+            const banDate = new Date(parseInt(banDateStr));
+            if (new Date() < banDate) {
+                return { isBanned: true, date: banDate.toLocaleString() };
+            } else {
+                // 기간 지났으면 해제
+                localStorage.removeItem(`student_${id}_banDate`);
+                localStorage.removeItem(`student_${id}_warnings`); // 경고도 초기화해줄지 여부는 정책 나름(여기선 초기화)
+            }
+        }
+        return { isBanned: false };
+    }
+
+    function addWarning(id) {
+        let warnings = parseInt(localStorage.getItem(`student_${id}_warnings`) || "0");
+        warnings++;
+        localStorage.setItem(`student_${id}_warnings`, warnings);
+
+        alert(`[경고 알림] 외출 시간이 3시간을 초과했습니다.\n현재 누적 경고: ${warnings}회`);
+
+        if (warnings >= 3) {
+            const banEndDate = Date.now() + BAN_DURATION_MS;
+            localStorage.setItem(`student_${id}_banDate`, banEndDate);
+            alert(`🚨 경고 3회 누적!\n오늘부터 2주간 좌석 이용이 금지됩니다.`);
+        }
+        
+        updateWarningDisplay();
+    }
+
+    function updateWarningDisplay() {
+        const warnings = localStorage.getItem(`student_${currentId}_warnings`) || "0";
+        warningCountEl.textContent = warnings;
+        warningDisplay.style.display = "block";
+    }
+
+    function showError(msg) {
+        idErrorEl.textContent = msg;
+        idErrorEl.style.display = "block";
+    }
+
 </script>
 
 </body>
