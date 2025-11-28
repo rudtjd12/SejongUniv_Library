@@ -203,9 +203,24 @@
     const WARNING_LIMIT_MS = 3 * 60 * 60 * 1000; // 3시간
     const BAN_DURATION_MS = 14 * 24 * 60 * 60 * 1000; // 2주
 
+    // --- 1. 접속 정보 및 중복 착석 방지 로직 (가장 먼저 실행) ---
     const params = new URLSearchParams(window.location.search);
     const seatNum = params.get("seat");
 
+    // 이 기기가 현재 사용 중인 좌석 번호를 가져옴
+    const activeSeat = localStorage.getItem("device_active_seat");
+
+    // 만약 사용 중인 좌석이 있는데, 지금 들어온 URL의 좌석 번호와 다르다면?
+    if (activeSeat && seatNum && activeSeat !== seatNum) {
+        alert(`🚫 오류: 이미 ${activeSeat}번 좌석을 이용 중입니다!\n\n해당 좌석 대시보드로 이동합니다.`);
+        // 강제로 원래 좌석 페이지로 이동
+        window.location.href = `?seat=${activeSeat}`;
+        // 아래 코드 실행 방지를 위해 에러 발생 (의도적)
+        throw new Error("Redirecting to active seat...");
+    }
+    // ---------------------------------------------------------
+
+    // DOM 요소
     const idCard = document.getElementById("id-card");
     const seatCard = document.getElementById("seat-card");
     const idInputEl = document.getElementById("idInput");
@@ -235,6 +250,7 @@
         seatTitleFormEl.textContent = `${seatNum}번 좌석 로그인`;
         seatTitleEl.textContent = `${seatNum}번 좌석 관리`;
 
+        // 해당 좌석에 저장된 정보가 있는지 확인
         const savedId = localStorage.getItem(`seat_${seatNum}_studentId`);
         if (savedId) {
             login(savedId);
@@ -245,13 +261,12 @@
     document.getElementById("idSubmit").addEventListener("click", () => {
         const inputId = idInputEl.value.trim();
         
-        // ▼ 수정됨: 학번 8자리 유효성 검사 로직
         if (!inputId) {
             showError("학번을 입력해주세요.");
             return;
         }
 
-        // 숫자만 8자리인지 확인하는 정규표현식
+        // 숫자만 8자리인지 확인
         const idPattern = /^\d{8}$/;
         if (!idPattern.test(inputId)) {
             showError("학번은 숫자 8자리여야 합니다.");
@@ -264,7 +279,12 @@
             return;
         }
 
+        // 로그인 성공 시 로컬스토리지 저장
         localStorage.setItem(`seat_${seatNum}_studentId`, inputId);
+        
+        // ★ [중요] 이 기기는 이제 seatNum 자리를 쓰고 있다고 "전역" 설정
+        localStorage.setItem("device_active_seat", seatNum);
+
         login(inputId);
     });
 
@@ -315,9 +335,13 @@
     }
 
     function logout(showAlert = false) {
+        // 좌석 정보 삭제
         localStorage.removeItem(`seat_${seatNum}_studentId`);
         localStorage.removeItem(`seat_${seatNum}_status`);
         localStorage.removeItem(`seat_${seatNum}_outStartTime`);
+        
+        // ★ [중요] 기기 점유 정보 삭제 (이제 다른 좌석 앉을 수 있음)
+        localStorage.removeItem("device_active_seat");
         
         if (timerInterval) clearInterval(timerInterval);
         currentId = "";
