@@ -17,6 +17,7 @@
             align-items: center;
             justify-content: center;
             background: #f5f5f5;
+            transition: background 0.3s, color 0.3s; /* 부드러운 전환 효과 */
         }
 
         .app-header {
@@ -38,16 +39,16 @@
             max-width: 360px;
         }
         
-        /* [추가됨] 롤링 문구 스타일 */
+        /* 롤링 문구 스타일 */
         .nudge-text {
-            font-size: 16px;
+            font-size: 15px; /* 글자 크기 약간 줄임 (줄바꿈 방지) */
             color: #f44336;      
             font-weight: 600; 
             margin-bottom: 12px;
             min-height: 20px; 
             line-height: 1.4;
             padding: 0 10px;
-            word-break: keep-all;
+            word-break: break-all; /* [수정] 단어가 짤리더라도 꽉 채움 (엔터 방지) */
             transition: opacity 0.3s;
         }
 
@@ -68,6 +69,7 @@
             max-width: 360px;
             width: 100%;
             margin-bottom: auto; 
+            transition: background 0.3s, box-shadow 0.3s; /* 부드러운 전환 */
         }
         #id-card, #seat-card { margin-top: auto; }
 
@@ -121,9 +123,68 @@
         .info { margin-top: 10px; font-size: 11px; color: #666; }
         .info2 { margin-top: 10px; font-size: 14px; color: #f44336; }
         .error { color: #c62828; font-size: 14px; margin-top: 8px; display: none; }
+
+        /* ========================================= */
+        /* [추가됨] 다크 모드 스타일 정의 */
+        /* ========================================= */
+        body.dark-mode {
+            background: #121212; /* 전체 배경: 아주 진한 회색 */
+            color: #e0e0e0;      /* 기본 글자: 연한 회색 */
+        }
+
+        body.dark-mode .app-title { color: #ffffff; }
+        body.dark-mode .app-subtitle { color: #b0b0b0; }
+
+        /* 카드(흰색 박스)를 어둡게 */
+        body.dark-mode .card {
+            background: #1e1e1e;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            color: #e0e0e0;
+        }
+
+        /* 입력창 어둡게 */
+        body.dark-mode #idInput {
+            background: #2c2c2c;
+            border: 1px solid #444;
+            color: #ffffff;
+        }
+
+        /* 학생 정보 줄 */
+        body.dark-mode .student-line {
+            border-top: 1px solid #444;
+        }
+        body.dark-mode .student-line span { color: #ffffff; }
+
+        /* 상태 메시지 글자색 조정 (너무 어두우면 안 보이니까) */
+        body.dark-mode .status-enter { color: #66bb6a; } /* 밝은 녹색 */
+        body.dark-mode .status-out { color: #ffca28; }   /* 밝은 노란색 */
+
+        /* 다크모드 버튼 스타일 (우측 상단 고정) */
+        .theme-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 100; /* 제일 위에 뜨게 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        body.dark-mode .theme-btn {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
     </style>
 </head>
 <body>
+
+    <button id="theme-toggle" class="theme-btn" onclick="toggleTheme()">🌙</button>
 
     <div class="app-header">
         <h1 class="app-title">세종대학교 학술정보원 열람실</h1>
@@ -217,7 +278,7 @@
             msgIndex = (msgIndex + 1) % nudgeMessages.length;
         }
     }
-    // 최초 실행 및 4초마다 반복
+    // 최초 실행 및 10초마다 반복
     rotateMessage(); 
     setInterval(rotateMessage, 10000);
 
@@ -348,6 +409,32 @@
             alert("외출 상태가 아닙니다.");
         }
     });
+
+
+    // ============================================================
+    // [로직 6] 다크 모드 기능 추가
+    // ============================================================
+    const themeBtn = document.getElementById("theme-toggle");
+    
+    // 1. 저장된 설정 불러오기 (기억력)
+    const currentTheme = localStorage.getItem("theme");
+    if (currentTheme === "dark") {
+        document.body.classList.add("dark-mode");
+        themeBtn.textContent = "☀️"; // 해 모양으로 변경
+    }
+
+    // 2. 버튼 클릭 시 동작 함수
+    function toggleTheme() {
+        document.body.classList.toggle("dark-mode");
+        
+        if (document.body.classList.contains("dark-mode")) {
+            localStorage.setItem("theme", "dark");
+            themeBtn.textContent = "☀️";
+        } else {
+            localStorage.setItem("theme", "light");
+            themeBtn.textContent = "🌙";
+        }
+    }
 
 
     // ============================================================
