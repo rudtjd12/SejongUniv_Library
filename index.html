@@ -2,8 +2,10 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <title>스마트 좌석 관리 시스템</title>
+    <title>스마트 좌석 배정 시스템</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
         /* [스타일 정의] */
@@ -16,169 +18,183 @@
             min-height: 100vh;
             align-items: center;
             justify-content: center;
-            background: #f5f5f5;
-            transition: background 0.3s, color 0.3s; /* 부드러운 전환 효과 */
+            
+            /* [수정] 배경을 움직이는 그라데이션으로 변경 (고급스러움 UP) */
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            transition: background 0.5s;
+        }
+
+        /* 배경 움직이는 애니메이션 정의 */
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 등장 애니메이션 (아래에서 위로 스르륵) */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translate3d(0, 40px, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
         }
 
         .app-header {
             text-align: center;
             margin-bottom: 24px;
+            color: white; /* 배경이 화려하니 글자는 흰색 */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2); /* 그림자 */
+            animation: fadeInUp 0.8s ease-out; /* 등장 효과 적용 */
         }
-        .app-title {
-            font-size: 22px; font-weight: 800; color: #333; margin: 0;
-        }
-        .app-subtitle {
-            font-size: 14px; color: #666; margin-top: 4px;
-        }
+        .app-title { font-size: 24px; font-weight: 800; margin: 0; }
+        .app-subtitle { font-size: 14px; opacity: 0.9; margin-top: 4px; color: #f0f0f0; }
 
         .bottom-footer {
-            margin-top: 100px;
+            margin-top: 60px;
             text-align: center;
-            padding-bottom: 120px;
+            padding-bottom: 40px;
             width: 100%;
             max-width: 360px;
+            animation: fadeInUp 1.2s ease-out; /* 약간 늦게 등장 */
         }
         
-        /* 롤링 문구 스타일 */
         .nudge-text {
-            font-size: 15px; /* 글자 크기 약간 줄임 (줄바꿈 방지) */
-            color: #f44336;      
+            font-size: 14px;
+            color: white; /* 다크모드/라이트모드 상관없이 잘 보이게 */     
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
             font-weight: 600; 
             margin-bottom: 12px;
             min-height: 20px; 
             line-height: 1.4;
             padding: 0 10px;
-            word-break: break-all; /* [수정] 단어가 짤리더라도 꽉 채움 (엔터 방지) */
+            word-break: break-all;
             transition: opacity 0.3s;
         }
 
         .bottom-logo-img {
-            max-width: 180px;
+            max-width: 160px;
             height: auto;
             display: block;
             margin: 0 auto;
-            opacity: 0.8;
+            opacity: 0.9;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
         }
 
+        /* [핵심] 글래스모피즘 카드 디자인 */
         .card {
-            background: #ffffff;
-            padding: 24px 28px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            background: rgba(255, 255, 255, 0.85); /* 반투명 흰색 */
+            backdrop-filter: blur(12px); /* 뒤쪽 배경 흐리게 (블러 효과) */
+            -webkit-backdrop-filter: blur(12px); /* 사파리용 */
+            
+            padding: 30px 28px;
+            border-radius: 20px; /* 더 둥글게 */
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); /* 부드러운 그림자 */
+            border: 1px solid rgba(255, 255, 255, 0.4); /* 얇은 테두리 */
+            
             text-align: center;
-            max-width: 360px;
-            width: 100%;
+            max-width: 340px;
+            width: 90%;
             margin-bottom: auto; 
-            transition: background 0.3s, box-shadow 0.3s; /* 부드러운 전환 */
+            animation: fadeInUp 1s ease-out; /* 등장 효과 적용 */
         }
+        
         #id-card, #seat-card { margin-top: auto; }
 
-        .seat-title {
-            font-size: 20px; font-weight: 700; margin-bottom: 12px;
-        }
-        .status {
-            font-size: 18px; margin: 16px 0;
-        }
+        .seat-title { font-size: 22px; font-weight: 800; margin-bottom: 16px; color: #333; }
+        
+        .status { font-size: 18px; margin: 16px 0; }
         .status span { font-weight: 700; }
         .status-enter { color: #2e7d32; } 
-        .status-out { color: #f9a825; }   
+        .status-out { color: #f57f17; }   
         
         .student-line {
-            font-size: 16px; margin-top: 4px; border-top: 1px solid #ddd;
-            padding-top: 8px; margin-bottom: 12px;
+            font-size: 16px; margin-top: 10px; border-top: 1px solid rgba(0,0,0,0.1);
+            padding-top: 12px; margin-bottom: 16px;
         }
-        .student-line span { font-weight: 600; color: #333; }
+        .student-line span { font-weight: 700; color: #333; }
 
         .timer-box {
-            background: #ffebee; color: #c62828; padding: 8px;
-            border-radius: 6px; margin-bottom: 15px; font-weight: bold;
+            background: rgba(255, 235, 238, 0.8); /* 반투명 */
+            color: #c62828; padding: 10px;
+            border-radius: 10px; margin-bottom: 15px; font-weight: bold;
             display: none; 
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
         }
 
         .warning-box {
             font-size: 13px; color: #d32f2f; margin-bottom: 10px;
-            background: #fff3e0; padding: 6px; border-radius: 4px;
+            background: rgba(255, 243, 224, 0.9); padding: 8px; border-radius: 8px;
             display: none;
         }
 
-        .btn-row {
-            display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
-        }
-        button {
-            padding: 8px 14px; font-size: 15px; border-radius: 8px;
-            border: none; cursor: pointer; transition: background 0.2s;
-        }
-        .btn-primary { background: #1976d2; color: #fff; }
-        .btn-secondary { background: #eeeeee; color: #333; }
-        .btn-danger { background: #d32f2f; color: #fff; }
+        .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
         
-        /* 테스트용 버튼 (숨김 가능) */
-        .btn-test { background: #666; color: #fff; font-size: 11px; margin-top: 20px; }
+        button {
+            padding: 12px 18px; font-size: 15px; border-radius: 12px;
+            border: none; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;
+            font-weight: 700;
+        }
+        button:active { transform: scale(0.95); } /* 누를 때 살짝 작아짐 */
+        
+        .btn-primary { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* 버튼도 그라데이션 */
+            color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-danger { 
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: #fff; box-shadow: 0 4px 15px rgba(255, 75, 43, 0.3);
+        }
+        
+        .btn-test { background: rgba(0,0,0,0.5); color: #fff; font-size: 11px; margin-top: 20px; }
 
         #idInput {
-            width: 100%; padding: 8px 10px; font-size: 16px; margin-bottom: 12px;
-            border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;
+            width: 100%; padding: 12px 15px; font-size: 16px; margin-bottom: 16px;
+            border-radius: 12px; border: 2px solid #eee; box-sizing: border-box;
+            background: rgba(255,255,255,0.9);
+            transition: border-color 0.3s;
         }
+        #idInput:focus { outline: none; border-color: #764ba2; }
 
-        .info { margin-top: 10px; font-size: 11px; color: #666; }
-        .info2 { margin-top: 10px; font-size: 14px; color: #f44336; }
-        .error { color: #c62828; font-size: 14px; margin-top: 8px; display: none; }
+        .info { margin-top: 15px; font-size: 12px; color: #666; opacity: 0.8; }
+        .info2 { margin-top: 15px; font-size: 13px; color: #d32f2f; font-weight: 600; }
+        .error { color: #ff1744; font-size: 14px; margin-top: 10px; display: none; font-weight: bold; }
 
-        /* ========================================= */
-        /* [추가됨] 다크 모드 스타일 정의 */
-        /* ========================================= */
+        /* 다크 모드 스타일 */
         body.dark-mode {
-            background: #121212; /* 전체 배경: 아주 진한 회색 */
-            color: #e0e0e0;      /* 기본 글자: 연한 회색 */
-        }
-
-        body.dark-mode .app-title { color: #ffffff; }
-        body.dark-mode .app-subtitle { color: #b0b0b0; }
-
-        /* 카드(흰색 박스)를 어둡게 */
-        body.dark-mode .card {
-            background: #1e1e1e;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            background: #1a1a2e; /* 다크모드일 땐 단색 배경 (너무 눈부시지 않게) */
+            background-image: none;
             color: #e0e0e0;
         }
-
-        /* 입력창 어둡게 */
-        body.dark-mode #idInput {
-            background: #2c2c2c;
-            border: 1px solid #444;
-            color: #ffffff;
+        body.dark-mode .card {
+            background: rgba(30, 30, 30, 0.8); /* 반투명 검정 */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
         }
+        body.dark-mode .app-title, body.dark-mode .app-subtitle, body.dark-mode .nudge-text { color: #eee; }
+        body.dark-mode #idInput { background: #333; border-color: #555; color: white; }
+        body.dark-mode .student-line { border-color: #444; }
+        body.dark-mode .student-line span { color: #fff; }
+        body.dark-mode .seat-title { color: #fff; }
 
-        /* 학생 정보 줄 */
-        body.dark-mode .student-line {
-            border-top: 1px solid #444;
-        }
-        body.dark-mode .student-line span { color: #ffffff; }
-
-        /* 상태 메시지 글자색 조정 (너무 어두우면 안 보이니까) */
-        body.dark-mode .status-enter { color: #66bb6a; } /* 밝은 녹색 */
-        body.dark-mode .status-out { color: #ffca28; }   /* 밝은 노란색 */
-
-        /* 다크모드 버튼 스타일 (우측 상단 고정) */
+        /* 테마 버튼 */
         .theme-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            z-index: 100; /* 제일 위에 뜨게 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%; width: 44px; height: 44px;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-size: 20px; cursor: pointer; z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(5px);
+            transition: background 0.3s;
         }
-        body.dark-mode .theme-btn {
-            background: rgba(255, 255, 255, 0.1);
-        }
+        .theme-btn:hover { background: rgba(255, 255, 255, 0.4); }
         
     </style>
 </head>
@@ -187,53 +203,53 @@
     <button id="theme-toggle" class="theme-btn" onclick="toggleTheme()">🌙</button>
 
     <div class="app-header">
-        <h1 class="app-title">세종대학교 학술정보원 열람실</h1>
+        <h1 class="app-title">SEJONG UNIVERSITY</h1>
         <p class="app-subtitle">스마트 좌석 배정 시스템</p>
     </div>
 
     <div class="card" id="id-card">
-        <div id="seat-title-form" class="seat-title">좌석 정보 불러오는 중...</div>
+        <div id="seat-title-form" class="seat-title">좌석 정보 확인 중...</div>
         
         <input id="idInput" type="text" maxlength="8" inputmode="numeric" placeholder="학번 8자리를 입력하세요" />
         
-        <button id="idSubmit" class="btn-primary">로그인 / 좌석 배정</button>
+        <button id="idSubmit" class="btn-primary" style="width:100%">입실 하기</button>
         <div id="idError" class="error"></div>
-        <div class="info2">세종대생 95%가 지키는 매너, 퇴실 처리는 필수입니다.</div>
+        <div class="info2">세종대생 98%가 지키는 매너,<br>퇴실 처리는 필수입니다.</div>
     </div>
 
     <div class="card" id="seat-card" style="display:none;">
         <div id="seat-title" class="seat-title"></div>
 
         <div class="student-line">
-            사용자: <span id="student-id-text">-</span>
+            User: <span id="student-id-text">-</span>
         </div>
 
         <div id="warning-display" class="warning-box">
-            ⚠️ 누적 경고: <span id="warning-count">0</span>회 (3회시 강제 퇴실)
+            ⚠️ 누적 경고: <span id="warning-count">0</span>회 (3회시 퇴실)
         </div>
 
         <div id="status" class="status">상태: <span>입실 중</span></div>
 
         <div id="out-timer-box" class="timer-box">
             외출 시간: <span id="timer-text">00:00:00</span>
-            <div style="font-size:11px; font-weight:normal; margin-top:4px;">
-                (3시간 초과 시 경고 1회)
+            <div style="font-size:11px; font-weight:normal; margin-top:4px; opacity:0.8">
+                (3시간 초과 시 경고)
             </div>
         </div>
 
         <div class="btn-row">
             <div id="controls-in" style="display:block;">
                 <button class="btn-secondary" id="btn-go-out">외출 하기</button>
-                <button class="btn-danger" id="btn-leave">퇴실 (사용 종료)</button>
+                <button class="btn-danger" id="btn-leave">퇴실</button>
             </div>
             <div id="controls-out" style="display:none;">
-                <button class="btn-primary" id="btn-return">복귀 (외출 종료)</button>
+                <button class="btn-primary" id="btn-return">복귀 하기</button>
                 <button class="btn-danger" id="btn-leave-out">바로 퇴실</button>
             </div>
         </div>
 
         <button id="btn-test-add-time" class="btn-test" style="display:none;">
-            [테스트] 외출 시간 +3시간 추가
+            [테스트] 시간 +3h
         </button>
 
         <div class="info">퇴실 시 초기 화면으로 돌아갑니다.</div>
@@ -241,64 +257,64 @@
 
     <div class="bottom-footer">
         <div id="footer-msg" class="nudge-text"></div>
-        
         <img src="Sejong-University.png" alt="Sejong University Logo" class="bottom-logo-img" />
     </div>
 
 
 <script>
     // ============================================================
-    // [설정] 상수는 여기서 관리하세요
+    // [설정] 상수
     // ============================================================
-    const WARNING_LIMIT_MS = 3 * 60 * 60 * 1000; // 3시간 (외출 제한)
-    const BAN_DURATION_MS = 14 * 24 * 60 * 60 * 1000; // 2주 (이용 정지)
+    const WARNING_LIMIT_MS = 3 * 60 * 60 * 1000;
+    const BAN_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
     
-    // [설정] 하단 롤링 문구 리스트 (원하는 만큼 추가하세요)
+    // [설정] 롤링 문구
     const nudgeMessages = [
         "세종대생 95%는 외출 3시간 약속을 정확히 지킵니다.",
         "지금 당신의 배려가, 도서관 문화를 만듭니다.",
         "빈자리는 짐이 아니라, 다음 사람에게 양보해 주세요.",
         "지난달, 1,200명의 학우가 퇴실 버튼을 눌러 배려했습니다.",
         "이 자리는 내일의 당신이 다시 앉고 싶어 할 자리입니다.",
-        "전체 이용자 95%는 외출버튼을 누릅니다. 그 5%가 혹시 당신인가요?",
-        "외출, 퇴실 또 까먹었지? 눌러 얼른. 안어렵잖아?",
-        "또 그냥 나가려 하셨나요? 퇴실, 외출 당장 눌러주세요."
+        "전체 이용자 95%는 외출버튼을 누릅니다.",
+        "외출, 퇴실 또 까먹었지? 얼른 눌러주세요.",
+        "또 그냥 나가려 하셨나요? 퇴실 버튼은 필수입니다."
     ];
 
     // ============================================================
-    // [로직 1] 롤링 문구 실행 (C언어 배열 순회와 동일)
+    // [로직 1] 롤링 문구
     // ============================================================
     let msgIndex = 0;
     const msgElement = document.getElementById("footer-msg");
 
     function rotateMessage() {
         if(nudgeMessages.length > 0) {
-            msgElement.textContent = nudgeMessages[msgIndex];
-            // 0 -> 1 -> 2 -> ... -> 0 (무한 반복)
-            msgIndex = (msgIndex + 1) % nudgeMessages.length;
+            msgElement.style.opacity = 0; // 페이드 아웃
+            setTimeout(() => {
+                msgElement.textContent = nudgeMessages[msgIndex];
+                msgElement.style.opacity = 1; // 페이드 인
+                msgIndex = (msgIndex + 1) % nudgeMessages.length;
+            }, 300);
         }
     }
-    // 최초 실행 및 10초마다 반복
     rotateMessage(); 
-    setInterval(rotateMessage, 10000);
+    setInterval(rotateMessage, 6000); // 6초마다 변경
 
 
     // ============================================================
-    // [로직 2] 접속 정보 확인 및 중복 로그인 방지
+    // [로직 2] URL 및 중복 검사
     // ============================================================
     const params = new URLSearchParams(window.location.search);
     const seatNum = params.get("seat");
     const activeSeat = localStorage.getItem("device_active_seat");
 
-    // "다른 자리(1번) 로그인 중인데, 지금 2번 자리 주소로 들어왔네? -> 튕겨내기"
     if (activeSeat && seatNum && activeSeat !== seatNum) {
         alert(`🚫 오류: 이미 ${activeSeat}번 좌석을 이용 중입니다!\n\n해당 좌석 대시보드로 이동합니다.`);
         window.location.href = `?seat=${activeSeat}`;
-        throw new Error("Redirecting..."); // 스크립트 강제 중단
+        throw new Error("Redirecting...");
     }
 
     // ============================================================
-    // [로직 3] DOM 요소 가져오기 (변수 연결)
+    // [로직 3] DOM 연결
     // ============================================================
     const idCard = document.getElementById("id-card");
     const seatCard = document.getElementById("seat-card");
@@ -321,7 +337,7 @@
     let timerInterval = null;
 
     // ============================================================
-    // [로직 4] 초기 화면 세팅
+    // [로직 4] 초기 세팅
     // ============================================================
     if (!seatNum) {
         seatTitleFormEl.textContent = "좌석 번호 오류";
@@ -329,10 +345,9 @@
         idErrorEl.textContent = "URL에 ?seat=번호 형식이 필요합니다.";
         document.getElementById("idSubmit").disabled = true;
     } else {
-        seatTitleFormEl.textContent = `${seatNum}번 좌석 로그인`;
-        seatTitleEl.textContent = `${seatNum}번 좌석 관리`;
+        seatTitleFormEl.textContent = `${seatNum}번 좌석`;
+        seatTitleEl.textContent = `${seatNum}번 좌석`;
 
-        // 이 자리에 누가 앉아있다고 저장되어 있나?
         const savedId = localStorage.getItem(`seat_${seatNum}_studentId`);
         if (savedId) {
             login(savedId);
@@ -340,94 +355,75 @@
     }
 
     // ============================================================
-    // [로직 5] 이벤트 리스너 (버튼 클릭 동작)
+    // [로직 5] 이벤트 핸들러
     // ============================================================
     
-    // 1. 로그인 버튼
+    // 1. 로그인 (폭죽 효과 추가!)
     document.getElementById("idSubmit").addEventListener("click", () => {
         const inputId = idInputEl.value.trim();
         
         if (!inputId) { showError("학번을 입력해주세요."); return; }
-        if((inputId<13999999) || (inputId>25999999)){showError("존재하지 않는 학번입니다."); return;}
         if (!/^\d{8}$/.test(inputId)) { showError("학번은 숫자 8자리여야 합니다."); return; }
         
-        // 블랙리스트 확인
         const banInfo = getStudentBanInfo(inputId);
         if (banInfo.isBanned) {
             showError(`이용 정지된 사용자입니다.\n해제일: ${banInfo.date}`);
             return;
         }
 
-        // 로그인 처리
+        // [WOW 포인트] 폭죽 터트리기!
+        fireConfetti();
+
         localStorage.setItem(`seat_${seatNum}_studentId`, inputId);
-        localStorage.setItem("device_active_seat", seatNum); // 기기 점유 설정
+        localStorage.setItem("device_active_seat", seatNum);
         login(inputId);
     });
 
-    // 2. 외출 버튼
     document.getElementById("btn-go-out").addEventListener("click", setOutStatus);
 
-    // 3. 복귀 버튼 (외출 종료)
     document.getElementById("btn-return").addEventListener("click", () => {
-        checkOutDurationAndProcess(); // 시간 초과했는지 검사
+        checkOutDurationAndProcess(); 
         setInStatus(); 
     });
 
-    // 4. 퇴실 버튼 (입실 중일 때) - [수정됨: 넛지 팝업 적용]
     document.getElementById("btn-leave").addEventListener("click", () => {
-        const userCheck = confirm(
-            "잠깐! 퇴실하시겠습니까?\n\n" +
-            "당신의 '퇴실' 버튼 한 번이,\n" +
-            "시험 기간 친구에게는 큰 '기회'가 됩니다.\n\n" +
-            "정말 종료하시겠습니까?"
-        );
+        const userCheck = confirm("퇴실하시겠습니까?\n\n빈자리는 다음 학우에게 큰 도움이 됩니다.");
         if (userCheck) logout(true);
     });
 
-    // 5. 바로 퇴실 버튼 (외출 중일 때) - [수정됨: 넛지 팝업 적용]
     document.getElementById("btn-leave-out").addEventListener("click", () => {
-        checkOutDurationAndProcess(); // 경고 줄 건 주고 퇴실
+        checkOutDurationAndProcess();
         if (currentId) {
-            const userCheck = confirm(
-                "외출 상태에서 바로 퇴실하시겠습니까?\n\n" +
-                "빈자리는 다음 학우를 위해 소중히 사용됩니다.\n" +
-                "정말 종료하시겠습니까?"
-            );
+            const userCheck = confirm("외출 상태에서 바로 퇴실하시겠습니까?");
             if (userCheck) logout(true);
         }
     });
 
-    // 6. 테스트 버튼
     document.getElementById("btn-test-add-time").addEventListener("click", () => {
         const outStartKey = `seat_${seatNum}_outStartTime`;
         let startTime = parseInt(localStorage.getItem(outStartKey));
         if (startTime) {
-            // 3시간 1분 전으로 시간 조작
             const newStartTime = startTime - (3 * 60 * 60 * 1000) - (60 * 1000); 
             localStorage.setItem(outStartKey, newStartTime);
-            alert("테스트: 외출 시간을 강제로 3시간 늘렸습니다.");
+            alert("테스트: 외출 시간 +3시간");
         } else {
             alert("외출 상태가 아닙니다.");
         }
     });
 
-
     // ============================================================
-    // [로직 6] 다크 모드 기능 추가
+    // [기능] 다크 모드
     // ============================================================
     const themeBtn = document.getElementById("theme-toggle");
-    
-    // 1. 저장된 설정 불러오기 (기억력)
     const currentTheme = localStorage.getItem("theme");
+    
     if (currentTheme === "dark") {
         document.body.classList.add("dark-mode");
-        themeBtn.textContent = "☀️"; // 해 모양으로 변경
+        themeBtn.textContent = "☀️";
     }
 
-    // 2. 버튼 클릭 시 동작 함수
     function toggleTheme() {
         document.body.classList.toggle("dark-mode");
-        
         if (document.body.classList.contains("dark-mode")) {
             localStorage.setItem("theme", "dark");
             themeBtn.textContent = "☀️";
@@ -437,11 +433,32 @@
         }
     }
 
+    // ============================================================
+    // [기능] 폭죽 함수 (Canvas Confetti)
+    // ============================================================
+    function fireConfetti() {
+        var count = 200;
+        var defaults = {
+            origin: { y: 0.7 }
+        };
+
+        function fire(particleRatio, opts) {
+            confetti(Object.assign({}, defaults, opts, {
+                particleCount: Math.floor(count * particleRatio)
+            }));
+        }
+
+        fire(0.25, { spread: 26, startVelocity: 55, });
+        fire(0.2, { spread: 60, });
+        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+        fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+        fire(0.1, { spread: 120, startVelocity: 45, });
+    }
+
 
     // ============================================================
-    // [함수 정의] 핵심 기능 구현
+    // [핵심 함수]
     // ============================================================
-    
     function login(id) {
         currentId = id;
         idInputEl.value = "";
@@ -465,8 +482,6 @@
         localStorage.removeItem(`seat_${seatNum}_studentId`);
         localStorage.removeItem(`seat_${seatNum}_status`);
         localStorage.removeItem(`seat_${seatNum}_outStartTime`);
-        
-        // 기기 점유 해제
         localStorage.removeItem("device_active_seat");
         
         if (timerInterval) clearInterval(timerInterval);
@@ -475,7 +490,7 @@
         seatCard.style.display = "none";
         idCard.style.display = "block";
         
-        if (showAlert) alert("퇴실 처리가 완료되었습니다.\n이용해 주셔서 감사합니다.");
+        if (showAlert) alert("퇴실 처리가 완료되었습니다.");
     }
 
     function setInStatus(save = true) {
@@ -518,7 +533,6 @@
         const now = Date.now();
         const diff = now - startTime;
         
-        // 시:분:초 계산
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -526,7 +540,6 @@
         
         timerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
         
-        // 3시간 넘으면 빨간색 강조
         if (diff > WARNING_LIMIT_MS) {
             timerText.style.color = "red";
             timerText.style.fontWeight = "900";
@@ -545,7 +558,6 @@
         }
     }
 
-    // 블랙리스트 조회
     function getStudentBanInfo(id) {
         const banDateStr = localStorage.getItem(`student_${id}_banDate`);
         if (banDateStr) {
@@ -553,7 +565,6 @@
             if (new Date() < banDate) {
                 return { isBanned: true, date: banDate.toLocaleDateString() };
             } else {
-                // 기간 지났으면 해제
                 localStorage.removeItem(`student_${id}_banDate`);
                 localStorage.removeItem(`student_${id}_warnings`);
             }
@@ -561,7 +572,6 @@
         return { isBanned: false };
     }
 
-    // 경고 부여 로직
     function addWarning(id) {
         let warnings = parseInt(localStorage.getItem(`student_${id}_warnings`) || "0");
         warnings++;
@@ -570,11 +580,10 @@
         if (warnings >= 3) {
             const banEndDate = Date.now() + BAN_DURATION_MS;
             localStorage.setItem(`student_${id}_banDate`, banEndDate);
-            
-            alert(`🚨 경고 3회 누적!\n규정에 따라 2주간 이용이 정지되며, 즉시 강제 퇴실됩니다.`);
+            alert(`🚨 경고 3회 누적!\n규정에 따라 2주간 이용이 정지됩니다.`);
             logout(false);
         } else {
-            alert(`[경고 알림] 외출 3시간 초과.\n현재 누적 경고: ${warnings}회 (3회시 정지)`);
+            alert(`[경고 알림] 외출 3시간 초과.\n현재 누적 경고: ${warnings}회`);
             updateWarningDisplay();
         }
     }
