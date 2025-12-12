@@ -221,7 +221,7 @@
         <div id="seat-title" class="seat-title"></div>
 
         <div class="student-line">
-            User: <span id="student-id-text">-</span>
+            학번: <span id="student-id-text">-</span>
         </div>
 
         <div id="warning-display" class="warning-box">
@@ -371,8 +371,6 @@
             showError(`이용 정지된 사용자입니다.\n해제일: ${banInfo.date}`);
             return;
         }
-
-        // [WOW 포인트] 폭죽 터트리기
 
         localStorage.setItem(`seat_${seatNum}_studentId`, inputId);
         localStorage.setItem("device_active_seat", seatNum);
