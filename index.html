@@ -348,7 +348,7 @@
         const inputId = idInputEl.value.trim();
         
         if (!inputId) { showError("학번을 입력해주세요."); return; }
-        if((inputId<14000000) || (inputId>26000000)){showError("존재하지 않는 학번입니다."); return;}
+        if((inputId<13999999) || (inputId>25999999)){showError("존재하지 않는 학번입니다."); return;}
         if (!/^\d{8}$/.test(inputId)) { showError("학번은 숫자 8자리여야 합니다."); return; }
         
         // 블랙리스트 확인
