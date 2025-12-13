@@ -231,11 +231,44 @@
         body.dark-mode .feature-list { color: #aaa; }
         .feature-list li { margin-bottom: 4px; }
 
+        /* 우측 하단 플로팅 버튼 스타일 */
+        .help-fab {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #ffffff;
+            color: #333;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 50px; /* 둥근 알약 모양 */
+            font-size: 15px;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 990;
+            display: flex;
+            align-items: center;
+            gap: 8px; /* 아이콘과 글자 사이 간격 */
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+            .help-fab:hover {
+                transform: translateY(-2px); /* 마우스 올리면 살짝 뜸 */
+                box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            }
+            
+            /* 다크모드일 때 색상 반전 */
+            body.dark-mode .help-fab {
+                background: #333;
+                color: white;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            }
     </style>
 </head>
 <body>
-
-    <button id="info-toggle" class="icon-btn" onclick="openModal()">ℹ️</button>
+    <button class="help-fab" onclick="openModal()">
+        <span>ℹ️</span> 이용 안내
+    </button>
     <button id="theme-toggle" class="icon-btn" onclick="toggleTheme()">🌙</button>
 
     <div class="app-header">
