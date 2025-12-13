@@ -620,7 +620,7 @@
         const outStartKey = `seat_${seatNum}_outStartTime`;
         let startTime = parseInt(localStorage.getItem(outStartKey));
         if (startTime) {
-            const newStartTime = Date.now() - (2 * 60 * 60 * 1000) - (59 * 60 * 1000);
+            const newStartTime = Date.now() - (2 * 60 * 60 * 1000) - (59 * 60 * 1000) - (50 * 1000);
             localStorage.setItem(outStartKey, newStartTime);
             alert("테스트: 외출 시간 +3시간 적용됨");
         } else {
