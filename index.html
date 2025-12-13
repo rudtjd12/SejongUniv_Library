@@ -515,12 +515,25 @@
         idErrorEl.textContent = "URL에 ?seat=번호 형식이 필요합니다.";
         document.getElementById("idSubmit").disabled = true;
     } else {
-        seatTitleFormEl.textContent = `${seatNum}번 좌석`;
-        seatTitleEl.textContent = `${seatNum}번 좌석`;
+        // --- [추가된 부분] 좌석 범위 체크 (1 ~ 165) ---
+        const seatInt = parseInt(seatNum); // 문자열을 숫자로 변환 (atoi)
+        
+        // 숫자가 아니거나(NaN), 1보다 작거나, 165보다 크면 에러 처리
+        if (isNaN(seatInt) || seatInt < 1 || seatInt > 165) {
+            seatTitleFormEl.textContent = "유효하지 않은 좌석";
+            idErrorEl.style.display = "block";
+            idErrorEl.textContent = `좌석 번호는 1번부터 165번까지만 존재합니다.\n(입력된 값: ${seatNum})`;
+            document.getElementById("idSubmit").disabled = true; // 버튼 비활성화
+        } 
+        else {
+            // 통과했을 때 (정상 로직)
+            seatTitleFormEl.textContent = `제 6열람실 ${seatNum}번 좌석`;
+            seatTitleEl.textContent = `제 6열람실 ${seatNum}번 좌석`;
 
-        const savedId = localStorage.getItem(`seat_${seatNum}_studentId`);
-        if (savedId) {
-            login(savedId);
+            const savedId = localStorage.getItem(`seat_${seatNum}_studentId`);
+            if (savedId) {
+                login(savedId);
+            }
         }
     }
 
