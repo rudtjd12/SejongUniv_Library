@@ -144,10 +144,15 @@
             // 통과했을 때 (정상 로직)
             seatTitleFormEl.textContent = `제 6열람실 ${seatNum}번 좌석`;
             seatTitleEl.textContent = `제 6열람실 ${seatNum}번 좌석`;
-
+            
             const savedId = localStorage.getItem(`seat_${seatNum}_studentId`);
             if (savedId) {
                 login(savedId);
+            }
+            if (warnings >= 3) {
+                const banEndDate = Date.now() + BAN_DURATION_MS;
+                localStorage.setItem(`student_${currentId}_banDate`, banEndDate);
+                msg += `\n\n🚫 [이용 정지] 경고 3회 누적으로 2주간 이용이 제한됩니다.`;
             }
         }
     }
