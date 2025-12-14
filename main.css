@@ -25,16 +25,6 @@ body {
             from { opacity: 0; transform: translate3d(0, 40px, 0); }
             to { opacity: 1; transform: translate3d(0, 0, 0); }
         }
-             .upper-logo-img {
-                /* [수정 1] 고정된 크기로 만들고 싶을 때 */
-                width: 30px;   /* 가로를 200px로 강제 설정 */
-                
-                /* [수정 2] 화면 크기에 맞춰 줄어들게 하고 싶을 때 (현재 설정) */
-                max-width: 160px; /* 최대 160px까지만 커지고, 화면이 좁으면 알아서 줄어듬 */
-                
-                /* [필수] 비율 유지 (찌그러짐 방지) */
-                height: auto; 
-            }
         .app-header {
             text-align: center;
             margin-bottom: 24px;
@@ -42,6 +32,21 @@ body {
             text-shadow: 0 2px 4px rgba(0,0,0,0.2);
             animation: fadeInUp 0.8s ease-out;
         }
+.header-row {
+    display: flex;             /* 가로로 나란히 배치 */
+    align-items: center;       /* 세로 중앙 정렬 (글자와 그림 높이 맞춤) */
+    justify-content: center;   /* 화면 정가운데 정렬 */
+    gap: 10px;                 /* 그림과 글자 사이 간격 10px */
+    margin-bottom: 4px;        /* 부제목과의 간격 */
+}
+
+/* [추가] 상단 로고 크기 조절 */
+.upper-logo-img {
+    width: 35px;               /* 로고 크기 (원하는대로 조절) */
+    height: auto;              /* 비율 유지 */
+}
+
+
         .app-title { font-size: 24px; font-weight: 800; margin: 0; }
         .app-subtitle { font-size: 14px; opacity: 0.9; margin-top: 4px; color: #f0f0f0; }
 
