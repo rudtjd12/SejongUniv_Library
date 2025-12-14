@@ -149,11 +149,6 @@
             if (savedId) {
                 login(savedId);
             }
-            if (warnings >= 3) {
-                const banEndDate = Date.now() + BAN_DURATION_MS;
-                localStorage.setItem(`student_${currentId}_banDate`, banEndDate);
-                msg += `\n\n🚫 [이용 정지] 경고 3회 누적으로 2주간 이용이 제한됩니다.`;
-            }
         }
     }
 
