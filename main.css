@@ -13,13 +13,11 @@ body {
             animation: gradientBG 15s ease infinite;
             transition: background 0.3s, color 0.3s;
         }
-
         @keyframes gradientBG {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-
         /* 등장 애니메이션 */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translate3d(0, 40px, 0); }
@@ -39,17 +37,13 @@ body {
     gap: 10px;                 /* 그림과 글자 사이 간격 10px */
     margin-bottom: 4px;        /* 부제목과의 간격 */
 }
-
 /* [추가] 상단 로고 크기 조절 */
 .upper-logo-img {
     width: 35px;               /* 로고 크기 (원하는대로 조절) */
     height: auto;              /* 비율 유지 */
 }
-
-
         .app-title { font-size: 24px; font-weight: 800; margin: 0; }
         .app-subtitle { font-size: 14px; opacity: 0.9; margin-top: 4px; color: black; }
-
         .bottom-footer {
             margin-top: 100px;
             text-align: center;
@@ -72,7 +66,6 @@ body {
             word-break: break-all;
             transition: opacity 0.3s;
         }
-
         .bottom-logo-img {
             max-width: 160px;
             height: auto;
@@ -84,7 +77,6 @@ body {
             transition: transform 0.1s;
         }
         .bottom-logo-img:active { transform: scale(0.95); }
-
         /* 글래스모피즘 카드 */
         .card {
             background: rgba(255, 255, 255, 0.85);
@@ -102,7 +94,6 @@ body {
             transition: background 0.3s, box-shadow 0.3s;
         }
         #id-card, #seat-card { margin-top: auto; }
-
         .seat-title { font-size: 22px; font-weight: 800; margin-bottom: 16px; color: #333; }
         
         .status { font-size: 18px; margin: 16px 0; }
@@ -115,7 +106,6 @@ body {
             padding-top: 12px; margin-bottom: 16px;
         }
         .student-line span { font-weight: 700; color: #333; }
-
         .timer-box {
             background: rgba(255, 235, 238, 0.8);
             color: #c62828; padding: 10px;
@@ -124,12 +114,18 @@ body {
             box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
         }
 
+        .usage-hint {
+            font-size: 11px;
+            font-weight: normal;
+            margin-top: 6px;
+            opacity: 0.8;
+        }
+
         .warning-box {
             font-size: 13px; color: #d32f2f; margin-bottom: 10px;
             background: rgba(255, 243, 224, 0.9); padding: 8px; border-radius: 8px;
             display: none;
         }
-
         .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
         
         button {
@@ -151,7 +147,6 @@ body {
         
         /* 테스트 버튼: 처음엔 무조건 숨김 */
         .btn-test { background: rgba(0,0,0,0.6); color: #fff; font-size: 12px; margin-top: 20px; display: none; width: 100%; }
-
         #idInput {
             width: 100%; padding: 12px 15px; font-size: 16px; margin-bottom: 16px;
             border-radius: 12px; border: 2px solid #eee; box-sizing: border-box;
@@ -159,11 +154,9 @@ body {
             transition: border-color 0.3s;
         }
         #idInput:focus { outline: none; border-color: #764ba2; }
-
         .info { margin-top: 15px; font-size: 12px; color: #666; opacity: 0.8; }
         .info2 { margin-top: 15px; font-size: 13px; color: #d32f2f; font-weight: 600; }
         .error { color: #ff1744; font-size: 14px; margin-top: 10px; display: none; font-weight: bold; }
-
         /* 다크 모드 스타일 */
         body.dark-mode {
             background: #1a1a2e;
@@ -180,7 +173,6 @@ body {
         body.dark-mode .student-line { border-color: #444; }
         body.dark-mode .student-line span { color: #fff; }
         body.dark-mode .seat-title { color: #fff; }
-
         /* 테마 버튼 (우측 상단) */
         .icon-btn {
             position: absolute; top: 20px;
@@ -196,7 +188,6 @@ body {
         
         #theme-toggle { right: 20px; }
         #info-toggle { right: 75px; } /* 테마 버튼 옆에 배치 */
-
         /* ========================================= */
         /* [추가됨] 설명 팝업 (Modal) 스타일 */
         /* ========================================= */
@@ -208,7 +199,6 @@ body {
             opacity: 0; transition: opacity 0.3s;
         }
         .modal-overlay.show { opacity: 1; }
-
         .modal-content {
             background: white; width: 90%; max-width: 400px; max-height: 80vh;
             border-radius: 20px; padding: 25px;
@@ -221,7 +211,6 @@ body {
         .modal-overlay.show .modal-content { transform: translateY(0); }
         
         body.dark-mode .modal-content { background: #2c2c2c; color: #eee; }
-
         .modal-header { font-size: 20px; font-weight: 800; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .modal-close { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #888; background:none; border:none; padding:0;}
         
@@ -232,7 +221,6 @@ body {
        .feature-title2 { font-size: 16px; font-weight: 700; color: #1976d2; margin-bottom: 8px; display: flex; align-items: center; gap:6px; margin-left:15px;}
         /* [수정됨] 목록 들여쓰기 스타일 */
        .feature-title3 { font-size: 16px; font-weight: 700; color: #1976d2; margin-bottom: 0; display: flex; align-items: center; gap:6px;}
-
         .feature-list2 { 
             padding-left: 20px; /* 점(Bullet)이 들어갈 공간 */
             margin-top: 5px;    /* 제목과의 간격 */
@@ -249,7 +237,6 @@ body {
         .feature-list { padding-left: 20px; margin: 5px 0 0 0; font-size: 13px; color: #666; }
         body.dark-mode .feature-list { color: #aaa; }
         .feature-list li { margin-bottom: 4px; }
-
         /* 우측 하단 플로팅 버튼 스타일 */
         .help-fab {
             position: fixed;
@@ -270,7 +257,6 @@ body {
             gap: 8px; /* 아이콘과 글자 사이 간격 */
             transition: transform 0.2s, box-shadow 0.2s;
         }
-
             .help-fab:hover {
                 transform: translateY(-2px); /* 마우스 올리면 살짝 뜸 */
                 box-shadow: 0 6px 20px rgba(0,0,0,0.3);
