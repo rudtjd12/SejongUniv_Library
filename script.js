@@ -267,7 +267,7 @@ if(testBtnOut) {
         
         if (outTime) {
             // 경고 로직을 속이기 위해 '외출 시작 시간'만 3시간 전으로 조작
-            const newOutTime = Date.now() - (3 * 60 * 60 * 1000) - (1000); 
+            const newOutTime = Date.now() - (3 * 60 * 60 * 1000) + (5 * 1000); 
             localStorage.setItem(outStartKey, newOutTime);
             
             // [삭제됨] localStorage.setItem(..., newOutTime); 
