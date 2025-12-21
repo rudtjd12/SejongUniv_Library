@@ -22,24 +22,38 @@ const nudgeMessages = [
 ];
 
 // ============================================================
-// [로직 1] 시크릿 로고 클릭 (테스트 버튼 활성화)
+// [로직 1] 시크릿 로고 & 개발자 버튼 생성
 // ============================================================
 let logoClickCount = 0;
 const logoImg = document.getElementById("secret-logo");
-const testBtn = document.getElementById("btn-test-add-time");
+
+// [수정됨] 기존 버튼 가져오기
+const testBtnOut = document.getElementById("btn-test-add-time"); 
+
+// [수정됨] 두 번째 버튼(사용 시간 조작용)을 스크립트로 즉석에서 만듦 (HTML 수정 불필요)
+const testBtnUsage = document.createElement("button");
+testBtnUsage.id = "btn-test-reduce-usage";
+testBtnUsage.className = "btn-test"; // 기존 스타일 상속
+testBtnUsage.textContent = "[개발자] 사용 시간 -4h (연장 활성화)";
+testBtnUsage.style.display = "none";
+testBtnUsage.style.marginTop = "10px"; 
+testBtnUsage.style.background = "#ef6c00"; // 주황색으로 구분
+// 기존 버튼 뒤에 붙이기
+if(testBtnOut && testBtnOut.parentNode) {
+    testBtnOut.parentNode.insertBefore(testBtnUsage, testBtnOut.nextSibling);
+}
 
 logoImg.addEventListener("click", () => {
     logoClickCount++;
-    // 5번 클릭하면
     if (logoClickCount === 5) {
-        testBtn.style.display = "block"; // 버튼 보이기
-        alert("🛠️ 개발자 모드 활성화: 테스트 버튼이 추가되었습니다.");
+        // 두 버튼 모두 보여주기
+        if(testBtnOut) testBtnOut.style.display = "block";
+        testBtnUsage.style.display = "block";
         
-        // 시각적 피드백 (로고가 살짝 튀어오름)
+        alert("🛠️ 개발자 모드 활성화: 테스트 버튼 2개가 추가되었습니다.");
+        
         logoImg.style.transform = "scale(1.2)";
         setTimeout(() => logoImg.style.transform = "scale(1)", 200);
-        
-        // 클릭 수 초기화 (다시 숨기려면 새로고침 해야 함)
         logoClickCount = 0;
     }
 });
@@ -59,7 +73,6 @@ function closeModalBtn() {
     setTimeout(() => modal.style.display = "none", 300);
 }
 
-// 검은 배경 클릭 시 닫기
 function closeModal(event) {
     if (event.target === modal) {
         closeModalBtn();
@@ -134,9 +147,7 @@ if (!seatNum) {
     idErrorEl.textContent = "URL에 ?seat=번호 형식이 필요합니다.";
     document.getElementById("idSubmit").disabled = true;
 } else {
-    // 좌석 범위 체크 (1 ~ 165)
     const seatInt = parseInt(seatNum); 
-    
     if (isNaN(seatInt) || seatInt < 1 || seatInt > 165) {
         seatTitleFormEl.textContent = "유효하지 않은 좌석";
         idErrorEl.style.display = "block";
@@ -161,7 +172,6 @@ if (!seatNum) {
 // 1. 로그인
 document.getElementById("idSubmit").addEventListener("click", () => {
     const inputId = idInputEl.value.trim();
-    
     if (!inputId) { showError("학번을 입력해주세요."); return; }
     if((inputId < 14000000) || (inputId > 25999999)){
         showError("유효하지 않은 학번입니다. (14~25학번)"); 
@@ -175,8 +185,6 @@ document.getElementById("idSubmit").addEventListener("click", () => {
         return;
     }
 
-    // 폭죽 효과 (필요 시 주석 해제)
-    // fireConfetti();
     localStorage.setItem(`seat_${seatNum}_studentId`, inputId);
     localStorage.setItem("device_active_seat", seatNum);
     login(inputId);
@@ -202,7 +210,6 @@ document.getElementById("btn-leave-out").addEventListener("click", () => {
     }
 });
 
-// 연장 버튼 로직
 extendBtn.addEventListener("click", () => {
     const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
     if (!startTime) return;
@@ -214,7 +221,6 @@ extendBtn.addEventListener("click", () => {
         alert("연장은 최대 2회까지 가능합니다.");
         return;
     }
-
     if (remaining > EXTENSION_WINDOW_MS) {
         alert("남은 시간이 2시간 이하일 때만 연장할 수 있습니다.");
         return;
@@ -226,35 +232,38 @@ extendBtn.addEventListener("click", () => {
     updateUsageTimer();
 });
 
-// [통합] 테스트 버튼 로직 (외출 3시간 추가 + 사용 시간 4시간 추가)
-testBtn.addEventListener("click", () => {
-    let msg = "";
+// [수정됨] 테스트 버튼 1: 외출 시간만 +3시간
+if(testBtnOut) {
+    testBtnOut.textContent = "[개발자] 외출 시간 +3h (경고 테스트)";
+    testBtnOut.addEventListener("click", () => {
+        const outStartKey = `seat_${seatNum}_outStartTime`;
+        let outTime = parseInt(localStorage.getItem(outStartKey));
+        if (outTime) {
+            const newOutTime = Date.now() - (3 * 60 * 60 * 1000) - (1000); 
+            localStorage.setItem(outStartKey, newOutTime);
+            // 외출 시작 시간도 같이 조작해줘야 타이머 정지 기능이 안 꼬임
+            localStorage.setItem(`seat_${seatNum}_usagePauseStart`, newOutTime); 
+            alert("⚡ [외출] 시간을 '3시간 초과' 상태로 변경했습니다.\n잠시 후 자동 강퇴됩니다.");
+        } else {
+            alert("먼저 '외출 하기'를 눌러주세요.");
+        }
+    });
+}
 
-    // 1. 외출 시간 조작
-    const outStartKey = `seat_${seatNum}_outStartTime`;
-    let outTime = parseInt(localStorage.getItem(outStartKey));
-    if (outTime) {
-        const newOutTime = Date.now() - (3 * 60 * 60 * 1000) - (1000); // 3시간 1초 경과
-        localStorage.setItem(outStartKey, newOutTime);
-        msg += "⚡ [외출] 시간을 '3시간 초과' 상태로 만들었습니다.\n";
-    }
-
-    // 2. 사용 시간 조작 (연장 테스트용)
+// [수정됨] 테스트 버튼 2: 사용 시간만 -4시간
+testBtnUsage.addEventListener("click", () => {
     const startKey = `seat_${seatNum}_startTime`;
     if (localStorage.getItem(startKey)) {
-        // 입실 시간을 '지금으로부터 4시간 1분 전'으로 설정 -> 남은 시간 1시간 59분
+        // 4시간 1분 전 입실한 걸로 조작
         const trickStartTime = Date.now() - (4 * 60 * 60 * 1000) - (1 * 60 * 1000);
         localStorage.setItem(startKey, trickStartTime);
-        updateUsageTimer(); // 화면 즉시 갱신
-        msg += "⚡ [사용] 입실한 지 4시간이 지난 것으로 조작했습니다. (연장 버튼 활성화)";
-    }
-
-    if (!msg) {
-        alert("로그인 또는 외출 상태가 아닙니다.");
+        updateUsageTimer(); 
+        alert("⚡ [사용] 입실 4시간 경과 상태로 변경했습니다.\n이제 '시간 연장' 버튼이 활성화됩니다.");
     } else {
-        alert(msg);
+        alert("먼저 '입실' 상태여야 합니다.");
     }
 });
+
 
 // ============================================================
 // [기능] 다크 모드
@@ -277,24 +286,6 @@ function toggleTheme() {
         themeBtn.textContent = "🌙";
     }
 }
-
-// ============================================================
-// [기능] 폭죽 함수 (필요 시 사용)
-// ============================================================
-// function fireConfetti() {
-//    var count = 200;
-//    var defaults = { origin: { y: 0.7 } };
-//    function fire(particleRatio, opts) {
-//        confetti(Object.assign({}, defaults, opts, {
-//           particleCount: Math.floor(count * particleRatio)
-//        }));
-//    }
-//    fire(0.25, { spread: 26, startVelocity: 55, });
-//    fire(0.2, { spread: 60, });
-//    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
-//    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-//    fire(0.1, { spread: 120, startVelocity: 45, });
-// }
 
 // ============================================================
 // [핵심 함수]
@@ -327,7 +318,7 @@ function logout(showAlert = false) {
     localStorage.removeItem(`seat_${seatNum}_outStartTime`);
     localStorage.removeItem(`seat_${seatNum}_startTime`);
     localStorage.removeItem(`seat_${seatNum}_extensions`);
-    localStorage.removeItem(`seat_${seatNum}_usagePauseStart`); // 일시정지 기록 삭제
+    localStorage.removeItem(`seat_${seatNum}_usagePauseStart`);
     localStorage.removeItem("device_active_seat");
     
     if (timerInterval) clearInterval(timerInterval);
@@ -344,14 +335,13 @@ function setInStatus(save = true) {
     if(save) localStorage.setItem(`seat_${seatNum}_status`, "입실");
     localStorage.removeItem(`seat_${seatNum}_outStartTime`);
 
-    // [수정됨] 복귀 시, 외출해 있던 시간만큼 '입실 시작 시간'을 뒤로 미룸 (시간 보상)
+    // 복귀 시 시간 보상 (외출했던 시간만큼 종료 시간 연장)
     const pauseStart = parseInt(localStorage.getItem(`seat_${seatNum}_usagePauseStart`));
     if (pauseStart) {
-        const pausedDuration = Date.now() - pauseStart; // 외출해 있던 총 시간
+        const pausedDuration = Date.now() - pauseStart; 
         const oldStartTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
         
         if (oldStartTime) {
-            // 시작 시간을 외출 시간만큼 더해서 미래로 보냄
             localStorage.setItem(`seat_${seatNum}_startTime`, oldStartTime + pausedDuration);
             alert(`⏳ 외출 시간(${Math.round(pausedDuration/1000/60)}분)만큼 좌석 사용 시간이 연장되었습니다.`);
         }
@@ -365,6 +355,9 @@ function setInStatus(save = true) {
     controlsOut.style.display = "none";
     timerBox.style.display = "none";
     
+    // 복귀 시 사용 타이머 스타일 원복 (일시정지 해제 느낌)
+    usageTimerBox.style.opacity = "1";
+    
     if (timerInterval) clearInterval(timerInterval);
 }
 
@@ -373,7 +366,7 @@ function setOutStatus() {
     localStorage.setItem(`seat_${seatNum}_status`, "외출");
     localStorage.setItem(`seat_${seatNum}_outStartTime`, now);
     
-    // [수정됨] 외출 시작된 순간을 기록 (사용 시간 일시정지용)
+    // 외출 시작 시점 기록 (시간 정지용)
     localStorage.setItem(`seat_${seatNum}_usagePauseStart`, now);
 
     resumeOutStatus();
@@ -415,16 +408,25 @@ function startUsageTimer() {
     updateUsageTimer();
 }
 
-// [수정됨] 버튼 활성화 로직 개선
+// [수정됨] 타이머 정지 로직 및 버튼 활성화
 function updateUsageTimer() {
     const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
     if (!startTime) return;
 
-    const now = Date.now();
+    let now = Date.now();
+    let isPaused = false;
+
+    // [핵심] 외출 중이면, 현재 시간이 아니라 '외출 시작했던 시간'으로 고정해버림 (타이머 멈춤 효과)
+    const pauseStart = parseInt(localStorage.getItem(`seat_${seatNum}_usagePauseStart`));
+    if (pauseStart) {
+        now = pauseStart; // 시간을 멈춤
+        isPaused = true;
+    }
+
     const endTime = getUsageEndTime();
     const remaining = endTime - now;
 
-    if (remaining <= 0) {
+    if (!isPaused && remaining <= 0) {
         clearInterval(usageInterval);
         usageInterval = null;
         alert("좌석 사용 제한 시간이 종료되었습니다. 자동으로 퇴실 처리됩니다.");
@@ -436,12 +438,20 @@ function updateUsageTimer() {
     const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
     const fmt = (n) => n.toString().padStart(2, '0');
-    usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
+    
+    // 외출 중일 땐 (일시정지) 텍스트 추가
+    if (isPaused) {
+        usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)} (일시정지)`;
+        usageTimerBox.style.opacity = "0.6"; // 흐리게 표시
+    } else {
+        usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
+        usageTimerBox.style.opacity = "1";
+    }
 
     const extensions = parseInt(localStorage.getItem(`seat_${seatNum}_extensions`) || "0");
-    const canExtend = remaining <= EXTENSION_WINDOW_MS && extensions < MAX_EXTENSIONS;
+    // 외출 중이 아니고, 시간 조건 맞으면 연장 가능
+    const canExtend = !isPaused && remaining <= EXTENSION_WINDOW_MS && extensions < MAX_EXTENSIONS;
     
-    // 버튼 스타일 처리 (비활성화 대신 투명도/커서 변경)
     if (!canExtend) {
         extendBtn.style.opacity = "0.5"; 
         extendBtn.style.cursor = "not-allowed";
@@ -450,7 +460,6 @@ function updateUsageTimer() {
         extendBtn.style.cursor = "pointer";
     }
 
-    // 버튼 텍스트 처리
     if (extensions >= MAX_EXTENSIONS) {
         extendBtn.textContent = "연장 불가 (최대 2회)";
     } else if (remaining > EXTENSION_WINDOW_MS) {
@@ -459,7 +468,7 @@ function updateUsageTimer() {
         extendBtn.textContent = "사용 시간 연장 (가능)";
     }
 
-    if (remaining <= EXTENSION_WINDOW_MS) {
+    if (!isPaused && remaining <= EXTENSION_WINDOW_MS) {
         usageTimerBox.style.color = "#c62828";
         usageTimerBox.style.fontWeight = "bold";
     } else {
