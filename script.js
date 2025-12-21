@@ -239,7 +239,7 @@ if(testBtnOut) {
         const outStartKey = `seat_${seatNum}_outStartTime`;
         let outTime = parseInt(localStorage.getItem(outStartKey));
         if (outTime) {
-            const newOutTime = Date.now() - (3 * 60 * 60 * 1000) - (10 * 1000); 
+            const newOutTime = Date.now() - (3 * 60 * 50 * 1000) - (1000); 
             localStorage.setItem(outStartKey, newOutTime);
             // 외출 시작 시간도 같이 조작해줘야 타이머 정지 기능이 안 꼬임
             localStorage.setItem(`seat_${seatNum}_usagePauseStart`, newOutTime); 
@@ -452,7 +452,7 @@ function updateUsageTimer() {
     
     // 외출 중일 땐 (일시정지) 텍스트 추가
     if (isPaused) {
-        usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)} (일시정지)`;
+        usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
         usageTimerBox.style.opacity = "0.6"; // 흐리게 표시
     } else {
         usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
