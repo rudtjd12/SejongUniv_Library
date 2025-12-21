@@ -395,7 +395,7 @@ function setInStatus(save = true) {
         
         if (oldStartTime) {
             localStorage.setItem(`seat_${seatNum}_startTime`, oldStartTime + pausedDuration);
-            alert(`⏳ 외출 시간(${Math.round(pausedDuration/1000/60)}분)만큼 좌석 사용 시간이 연장되었습니다.`);
+            // alert(`⏳ 외출 시간(${Math.round(pausedDuration/1000/60)}분)만큼 좌석 사용 시간이 연장되었습니다.`);
         }
         localStorage.removeItem(`seat_${seatNum}_usagePauseStart`);
     }
