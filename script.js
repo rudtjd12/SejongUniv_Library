@@ -22,35 +22,62 @@ const nudgeMessages = [
 ];
 
 // ============================================================
-// [로직 1] 시크릿 로고 & 개발자 버튼 생성
+// [로직 1] 시크릿 로고 & 개발자 버튼 UI 생성
 // ============================================================
 let logoClickCount = 0;
 const logoImg = document.getElementById("secret-logo");
 
-// [수정됨] 기존 버튼 가져오기
-const testBtnOut = document.getElementById("btn-test-add-time"); 
+// 1. 기존 HTML에 있는 버튼 (외출 테스트용으로 사용)
+const testBtnOut = document.getElementById("btn-test-add-time");
 
-// [수정됨] 두 번째 버튼(사용 시간 조작용)을 스크립트로 즉석에서 만듦 (HTML 수정 불필요)
-const testBtnUsage = document.createElement("button");
-testBtnUsage.id = "btn-test-reduce-usage";
-testBtnUsage.className = "btn-test"; // 기존 스타일 상속
-testBtnUsage.textContent = "[개발자] 사용 시간 -4h (연장 활성화)";
-testBtnUsage.style.display = "none";
-testBtnUsage.style.marginTop = "10px"; 
-testBtnUsage.style.background = "#ef6c00"; // 주황색으로 구분
-// 기존 버튼 뒤에 붙이기
+// 2. [신규] 반반 버튼을 담을 컨테이너 생성
+const btnRow = document.createElement("div");
+btnRow.style.display = "none"; // 처음엔 숨김
+btnRow.style.gap = "10px";
+btnRow.style.marginTop = "10px";
+btnRow.style.width = "100%";
+// flex로 나란히 배치
+btnRow.style.display = "none"; // flex는 활성화될 때 설정
+
+// 3. [신규] 왼쪽 버튼: 연장 가능 상태 만들기
+const testBtnExtend = document.createElement("button");
+testBtnExtend.className = "btn-test"; // 기존 스타일 상속
+testBtnExtend.textContent = "조건 충족 (연장 ON)";
+testBtnExtend.style.margin = "0"; // 마진 제거 (컨테이너가 제어)
+testBtnExtend.style.flex = "1";   // 반반 차지
+testBtnExtend.style.background = "#1976d2"; // 파란색 계열
+
+// 4. [신규] 오른쪽 버튼: 10초 전 만들기 (자동 퇴실)
+const testBtnExpire = document.createElement("button");
+testBtnExpire.className = "btn-test";
+testBtnExpire.textContent = "10초 전 (자동퇴실)";
+testBtnExpire.style.margin = "0";
+testBtnExpire.style.flex = "1";   // 반반 차지
+testBtnExpire.style.background = "#d32f2f"; // 빨간색 계열
+
+// 컨테이너에 버튼 2개 넣기
+btnRow.appendChild(testBtnExtend);
+btnRow.appendChild(testBtnExpire);
+
+// 기존 버튼 뒤에 컨테이너 붙이기
 if(testBtnOut && testBtnOut.parentNode) {
-    testBtnOut.parentNode.insertBefore(testBtnUsage, testBtnOut.nextSibling);
+    testBtnOut.parentNode.insertBefore(btnRow, testBtnOut.nextSibling);
 }
 
+// 로고 클릭 이벤트
 logoImg.addEventListener("click", () => {
     logoClickCount++;
     if (logoClickCount === 5) {
-        // 두 버튼 모두 보여주기
-        if(testBtnOut) testBtnOut.style.display = "block";
-        testBtnUsage.style.display = "block";
+        // 버튼들 모두 보이기
+        if(testBtnOut) {
+            testBtnOut.style.display = "block";
+            testBtnOut.textContent = "[개발자] 외출 시간 +3h (경고 테스트)";
+        }
         
-        alert("🛠️ 개발자 모드 활성화: 테스트 버튼 2개가 추가되었습니다.");
+        // 반반 컨테이너 보이기 (flex 모드)
+        btnRow.style.display = "flex";
+        
+        alert("🛠️ 개발자 모드 활성화: 입/퇴실 시뮬레이션 버튼이 추가되었습니다.");
         
         logoImg.style.transform = "scale(1.2)";
         setTimeout(() => logoImg.style.transform = "scale(1)", 200);
@@ -232,44 +259,59 @@ extendBtn.addEventListener("click", () => {
     updateUsageTimer();
 });
 
-// [수정됨] 테스트 버튼 1: 외출 시간만 +3시간
+// [테스트 1] 외출 시간 +3시간 (기존 버튼)
 if(testBtnOut) {
-    testBtnOut.textContent = "[개발자] 외출 시간 +3h (경고 테스트)";
     testBtnOut.addEventListener("click", () => {
         const outStartKey = `seat_${seatNum}_outStartTime`;
         let outTime = parseInt(localStorage.getItem(outStartKey));
         if (outTime) {
             const newOutTime = Date.now() - (3 * 60 * 50 * 1000) - (1000); 
             localStorage.setItem(outStartKey, newOutTime);
-            // 외출 시작 시간도 같이 조작해줘야 타이머 정지 기능이 안 꼬임
             localStorage.setItem(`seat_${seatNum}_usagePauseStart`, newOutTime); 
-            alert("⚡ [외출] 시간을 '3시간 초과' 상태로 변경했습니다.\n잠시 후 자동 강퇴됩니다.");
+            alert("⚡ [외출] 3시간 초과 상태로 변경! (잠시 후 경고)");
         } else {
-            alert("먼저 '외출 하기'를 눌러주세요.");
+            alert("먼저 '외출 하기' 상태여야 합니다.");
         }
     });
 }
 
-// [수정됨] 테스트 버튼 2: 사용 시간만 -4시간
-testBtnUsage.addEventListener("click", () => {
+// [테스트 2] 연장 가능 상태 (남은 시간 1시간 59분)
+testBtnExtend.addEventListener("click", () => {
     const startKey = `seat_${seatNum}_startTime`;
     const extKey = `seat_${seatNum}_extensions`;
 
     if (localStorage.getItem(startKey)) {
-        // 1. 현재 나의 총 이용 가능한 시간 계산 (기본 6시간 + 연장된 시간)
         const extensions = parseInt(localStorage.getItem(extKey) || "0");
         const totalDuration = BASE_USAGE_LIMIT_MS + (extensions * EXTENSION_DURATION_MS);
         
-        // 2. 목표: "남은 시간을 딱 1시간 59분(약 2시간)으로 만들자"
-        // 공식: 입실시간 = 현재시간 - (총시간 - 목표남은시간)
-        const targetRemaining = 1 * 60 * 60 * 1000 + 59 * 60 * 1000; // 1시간 59분
+        // 목표: 남은 시간을 1시간 59분으로 설정
+        const targetRemaining = 1 * 60 * 60 * 1000 + 59 * 60 * 1000;
         const trickStartTime = Date.now() - (totalDuration - targetRemaining);
         
-        // 3. 적용
         localStorage.setItem(startKey, trickStartTime);
+        updateUsageTimer(); 
+        alert(`⚡ [입실] 종료 2시간 전으로 이동!\n(연장 횟수 ${extensions}회 유지 / 버튼 활성화)`);
+    } else {
+        alert("먼저 '입실' 상태여야 합니다.");
+    }
+});
+
+// [테스트 3] 자동 퇴실 (남은 시간 10초)
+testBtnExpire.addEventListener("click", () => {
+    const startKey = `seat_${seatNum}_startTime`;
+    const extKey = `seat_${seatNum}_extensions`;
+
+    if (localStorage.getItem(startKey)) {
+        const extensions = parseInt(localStorage.getItem(extKey) || "0");
+        const totalDuration = BASE_USAGE_LIMIT_MS + (extensions * EXTENSION_DURATION_MS);
         
-        updateUsageTimer(); // 화면 즉시 갱신
-        alert(`⚡ [테스트] 현재 연장 횟수(${extensions}회) 유지!\n종료 1시간 59분 전으로 시간이동했습니다.\n(연장 버튼이 활성화됩니다)`);
+        // 목표: 남은 시간을 딱 10초로 설정
+        const targetRemaining = 10 * 1000; // 10초
+        const trickStartTime = Date.now() - (totalDuration - targetRemaining);
+        
+        localStorage.setItem(startKey, trickStartTime);
+        updateUsageTimer(); 
+        alert(`⚡ [입실] 종료 10초 전입니다!\n자동 퇴실 로직을 확인하세요.`);
     } else {
         alert("먼저 '입실' 상태여야 합니다.");
     }
@@ -346,7 +388,6 @@ function setInStatus(save = true) {
     if(save) localStorage.setItem(`seat_${seatNum}_status`, "입실");
     localStorage.removeItem(`seat_${seatNum}_outStartTime`);
 
-    // 복귀 시 시간 보상 (외출했던 시간만큼 종료 시간 연장)
     const pauseStart = parseInt(localStorage.getItem(`seat_${seatNum}_usagePauseStart`));
     if (pauseStart) {
         const pausedDuration = Date.now() - pauseStart; 
@@ -354,7 +395,7 @@ function setInStatus(save = true) {
         
         if (oldStartTime) {
             localStorage.setItem(`seat_${seatNum}_startTime`, oldStartTime + pausedDuration);
-            // alert(`⏳ 외출 시간(${Math.round(pausedDuration/1000/60)}분)만큼 좌석 사용 시간이 연장되었습니다.`);
+            alert(`⏳ 외출 시간(${Math.round(pausedDuration/1000/60)}분)만큼 좌석 사용 시간이 연장되었습니다.`);
         }
         localStorage.removeItem(`seat_${seatNum}_usagePauseStart`);
     }
@@ -366,7 +407,6 @@ function setInStatus(save = true) {
     controlsOut.style.display = "none";
     timerBox.style.display = "none";
     
-    // 복귀 시 사용 타이머 스타일 원복 (일시정지 해제 느낌)
     usageTimerBox.style.opacity = "1";
     
     if (timerInterval) clearInterval(timerInterval);
@@ -377,7 +417,6 @@ function setOutStatus() {
     localStorage.setItem(`seat_${seatNum}_status`, "외출");
     localStorage.setItem(`seat_${seatNum}_outStartTime`, now);
     
-    // 외출 시작 시점 기록 (시간 정지용)
     localStorage.setItem(`seat_${seatNum}_usagePauseStart`, now);
 
     resumeOutStatus();
@@ -419,7 +458,6 @@ function startUsageTimer() {
     updateUsageTimer();
 }
 
-// [수정됨] 타이머 정지 로직 및 버튼 활성화
 function updateUsageTimer() {
     const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
     if (!startTime) return;
@@ -427,7 +465,6 @@ function updateUsageTimer() {
     let now = Date.now();
     let isPaused = false;
 
-    // [핵심] 외출 중이면, 현재 시간이 아니라 '외출 시작했던 시간'으로 고정해버림 (타이머 멈춤 효과)
     const pauseStart = parseInt(localStorage.getItem(`seat_${seatNum}_usagePauseStart`));
     if (pauseStart) {
         now = pauseStart; // 시간을 멈춤
@@ -450,17 +487,15 @@ function updateUsageTimer() {
     const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
     const fmt = (n) => n.toString().padStart(2, '0');
     
-    // 외출 중일 땐 (일시정지) 텍스트 추가
     if (isPaused) {
         usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
-        usageTimerBox.style.opacity = "0.6"; // 흐리게 표시
+        usageTimerBox.style.opacity = "0.6";
     } else {
         usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
         usageTimerBox.style.opacity = "1";
     }
 
     const extensions = parseInt(localStorage.getItem(`seat_${seatNum}_extensions`) || "0");
-    // 외출 중이 아니고, 시간 조건 맞으면 연장 가능
     const canExtend = !isPaused && remaining <= EXTENSION_WINDOW_MS && extensions < MAX_EXTENSIONS;
     
     if (!canExtend) {
