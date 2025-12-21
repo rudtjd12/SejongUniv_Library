@@ -3,7 +3,11 @@
     // ============================================================
     const WARNING_LIMIT_MS = 3 * 60 * 60 * 1000;
     const BAN_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
-    
+    const BASE_USAGE_LIMIT_MS = 6 * 60 * 60 * 1000;
+    const EXTENSION_DURATION_MS = 3 * 60 * 60 * 1000;
+    const EXTENSION_WINDOW_MS = 2 * 60 * 60 * 1000;
+    const MAX_EXTENSIONS = 2;
+
     // [설정] 롤링 문구
     const nudgeMessages = [
         "세종대생 95%는 외출 3시간 약속을 정확히 지킵니다.",
@@ -16,14 +20,12 @@
         "또 그냥 나가려 하셨나요? 퇴실 버튼은 필수입니다.",
         "외출 안하고 나가는 당신의 양심은 안녕하십니까?" //
     ];
-
     // ============================================================
     // [로직 1] 시크릿 로고 클릭 (테스트 버튼 활성화)
     // ============================================================
     let logoClickCount = 0;
     const logoImg = document.getElementById("secret-logo");
     const testBtn = document.getElementById("btn-test-add-time");
-
     logoImg.addEventListener("click", () => {
         logoClickCount++;
         // 5번 클릭하면
@@ -39,24 +41,19 @@
             logoClickCount = 0;
         }
     });
-
-
     // ============================================================
     // [로직 2] 설명 팝업 (Modal) 제어
     // ============================================================
     const modal = document.getElementById("infoModal");
-
     function openModal() {
         modal.style.display = "flex";
         // 약간의 딜레이 후 투명도 조절 (애니메이션)
         setTimeout(() => modal.classList.add("show"), 10);
     }
-
     function closeModalBtn() {
         modal.classList.remove("show");
         setTimeout(() => modal.style.display = "none", 300);
     }
-
     // 검은 배경 클릭 시 닫기
     function closeModal(event) {
         if (event.target === modal) {
@@ -64,13 +61,11 @@
         }
     }
 //넌 왜 업데이트가 안되는데//
-
     // ============================================================
     // [로직 3] 롤링 문구
     // ============================================================
     let msgIndex = 0;
     const msgElement = document.getElementById("footer-msg");
-
     function rotateMessage() {
         if(nudgeMessages.length > 0) {
             msgElement.style.opacity = 0;
@@ -83,21 +78,17 @@
     }
     rotateMessage(); 
     setInterval(rotateMessage, 6000); 
-
-
     // ============================================================
     // [로직 4] URL 및 중복 검사
     // ============================================================
     const params = new URLSearchParams(window.location.search);
     const seatNum = params.get("seat");
     const activeSeat = localStorage.getItem("device_active_seat");
-
     if (activeSeat && seatNum && activeSeat !== seatNum) {
         alert(`🚫 오류: 이미 ${activeSeat}번 좌석을 이용 중입니다!\n\n해당 좌석 대시보드로 이동합니다.`);
         window.location.href = `?seat=${activeSeat}`;
         throw new Error("Redirecting...");
     }
-
     // ============================================================
     // [로직 5] DOM 연결
     // ============================================================
@@ -113,6 +104,9 @@
     const statusTextEl = document.querySelector("#status span");
     const timerBox = document.getElementById("out-timer-box");
     const timerText = document.getElementById("timer-text");
+    const usageTimerBox = document.getElementById("usage-timer-box");
+    const usageTimerText = document.getElementById("usage-timer-text");
+    const extendBtn = document.getElementById("btn-extend-time");
     const warningDisplay = document.getElementById("warning-display");
 
     const controlsIn = document.getElementById("controls-in");
@@ -120,6 +114,7 @@
 
     let currentId = "";
     let timerInterval = null;
+    let usageInterval = null;
 
     // ============================================================
     // [로직 6] 초기 세팅
@@ -151,7 +146,6 @@
             }
         }
     }
-
     // ============================================================
     // [로직 7] 이벤트 핸들러
     // ============================================================
@@ -173,33 +167,50 @@
             showError(`이용 정지된 사용자입니다.\n해제일: ${banInfo.date}`);
             return;
         }
-
         // 폭죽 터트리기
         //fireConfetti();
-
         localStorage.setItem(`seat_${seatNum}_studentId`, inputId);
         localStorage.setItem("device_active_seat", seatNum);
         login(inputId);
     });
-
     document.getElementById("btn-go-out").addEventListener("click", setOutStatus);
-
     document.getElementById("btn-return").addEventListener("click", () => {
         checkOutDurationAndProcess(); 
         setInStatus(); 
     });
-
     document.getElementById("btn-leave").addEventListener("click", () => {
         const userCheck = confirm("퇴실하시겠습니까?\n\n빈자리는 다음 학우에게 큰 도움이 됩니다.");
         if (userCheck) logout(true);
     });
-
     document.getElementById("btn-leave-out").addEventListener("click", () => {
         checkOutDurationAndProcess();
         if (currentId) {
             const userCheck = confirm("외출 상태에서 바로 퇴실하시겠습니까?");
             if (userCheck) logout(true);
         }
+    });
+
+    extendBtn.addEventListener("click", () => {
+        const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
+        if (!startTime) return;
+
+        const extensions = parseInt(localStorage.getItem(`seat_${seatNum}_extensions`) || "0");
+        const remaining = getUsageEndTime() - Date.now();
+
+        if (extensions >= MAX_EXTENSIONS) {
+            alert("연장은 최대 2회까지 가능합니다.");
+            return;
+        }
+
+        if (remaining > EXTENSION_WINDOW_MS) {
+            alert("남은 시간이 2시간 이하일 때만 연장할 수 있습니다.");
+            return;
+        }
+
+        const newExtensions = extensions + 1;
+        localStorage.setItem(`seat_${seatNum}_extensions`, newExtensions);
+        alert(`사용 시간이 3시간 연장되었습니다. (총 ${newExtensions}회 연장)`);
+        updateUsageTimer();
     });
 
     // 테스트 버튼 로직
@@ -214,7 +225,6 @@
             alert("외출 상태가 아닙니다.");
         }
     });
-
     // ============================================================
     // [기능] 다크 모드
     // ============================================================
@@ -225,7 +235,6 @@
         document.body.classList.add("dark-mode");
         themeBtn.textContent = "☀️";
     }
-
     function toggleTheme() {
         document.body.classList.toggle("dark-mode");
         if (document.body.classList.contains("dark-mode")) {
@@ -236,28 +245,23 @@
             themeBtn.textContent = "🌙";
         }
     }
-
     // ============================================================
     // [기능] 폭죽 함수
     // ============================================================
     //function fireConfetti() {
     //    var count = 200;
     //    var defaults = { origin: { y: 0.7 } };
-
     //    function fire(particleRatio, opts) {
     //        confetti(Object.assign({}, defaults, opts, {
     //           particleCount: Math.floor(count * particleRatio)
     //        }));
     //    }
-
     //    fire(0.25, { spread: 26, startVelocity: 55, });
     //    fire(0.2, { spread: 60, });
     //    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
     //    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
     //    fire(0.1, { spread: 120, startVelocity: 45, });
     //}
-
-
     // ============================================================
     // [핵심 함수]
     // ============================================================
@@ -270,6 +274,9 @@
         seatCard.style.display = "block";
         studentIdTextEl.textContent = currentId;
 
+        ensureUsageSession();
+        startUsageTimer();
+
         updateWarningDisplay();
 
         const savedStatus = localStorage.getItem(`seat_${seatNum}_status`) || "입실";
@@ -279,14 +286,17 @@
             setInStatus(false);
         }
     }
-
     function logout(showAlert = false) {
         localStorage.removeItem(`seat_${seatNum}_studentId`);
         localStorage.removeItem(`seat_${seatNum}_status`);
         localStorage.removeItem(`seat_${seatNum}_outStartTime`);
+        localStorage.removeItem(`seat_${seatNum}_startTime`);
+        localStorage.removeItem(`seat_${seatNum}_extensions`);
         localStorage.removeItem("device_active_seat");
         
+
         if (timerInterval) clearInterval(timerInterval);
+        if (usageInterval) clearInterval(usageInterval);
         currentId = "";
 
         seatCard.style.display = "none";
@@ -294,7 +304,6 @@
         
         if (showAlert) alert("퇴실 처리가 완료되었습니다.");
     }
-
     function setInStatus(save = true) {
         if(save) localStorage.setItem(`seat_${seatNum}_status`, "입실");
         localStorage.removeItem(`seat_${seatNum}_outStartTime`);
@@ -308,14 +317,12 @@
         
         if (timerInterval) clearInterval(timerInterval);
     }
-
     function setOutStatus() {
         const now = Date.now();
         localStorage.setItem(`seat_${seatNum}_status`, "외출");
         localStorage.setItem(`seat_${seatNum}_outStartTime`, now);
         resumeOutStatus();
     }
-
     function resumeOutStatus() {
         statusTextEl.textContent = "외출 중";
         statusTextEl.className = "status-out";
@@ -328,10 +335,67 @@
         updateTimer();
     }
 
+    function ensureUsageSession() {
+        const startKey = `seat_${seatNum}_startTime`;
+        const extensionsKey = `seat_${seatNum}_extensions`;
+
+        if (!localStorage.getItem(startKey)) {
+            localStorage.setItem(startKey, Date.now());
+        }
+        if (!localStorage.getItem(extensionsKey)) {
+            localStorage.setItem(extensionsKey, "0");
+        }
+    }
+
+    function getUsageEndTime() {
+        const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
+        const extensions = parseInt(localStorage.getItem(`seat_${seatNum}_extensions`) || "0");
+        return startTime + BASE_USAGE_LIMIT_MS + (extensions * EXTENSION_DURATION_MS);
+    }
+
+    function startUsageTimer() {
+        if (usageInterval) clearInterval(usageInterval);
+        usageInterval = setInterval(updateUsageTimer, 1000);
+        updateUsageTimer();
+    }
+
+    function updateUsageTimer() {
+        const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
+        if (!startTime) return;
+
+        const now = Date.now();
+        const endTime = getUsageEndTime();
+        const remaining = endTime - now;
+
+        if (remaining <= 0) {
+            clearInterval(usageInterval);
+            usageInterval = null;
+            alert("좌석 사용 제한 시간이 종료되었습니다. 자동으로 퇴실 처리됩니다.");
+            logout(false);
+            return;
+        }
+
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+        const fmt = (n) => n.toString().padStart(2, '0');
+        usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
+
+        const extensions = parseInt(localStorage.getItem(`seat_${seatNum}_extensions`) || "0");
+        const canExtend = remaining <= EXTENSION_WINDOW_MS && extensions < MAX_EXTENSIONS;
+        extendBtn.disabled = !canExtend;
+        extendBtn.textContent = extensions >= MAX_EXTENSIONS ? "연장 불가" : "사용 시간 연장";
+
+        if (remaining <= EXTENSION_WINDOW_MS) {
+            usageTimerBox.style.color = "#c62828";
+        } else {
+            usageTimerBox.style.color = "#c62828";
+        }
+    }
+
     function updateTimer() {
         const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_outStartTime`));
         if (!startTime) return;
-
         const now = Date.now();
         const diff = now - startTime;
         
@@ -348,22 +412,18 @@
             // 1. 타이머 멈춤 (중복 실행 방지)
             clearInterval(timerInterval);
             timerInterval = null; // 확실하게 초기화
-
             // 2. 경고 1회 추가 로직
             let warnings = parseInt(localStorage.getItem(`student_${currentId}_warnings`) || "0");
             warnings++;
             localStorage.setItem(`student_${currentId}_warnings`, warnings);
-
             // 3. 메시지 준비
             let msg = `🚨 [자동 퇴실 안내]\n\n외출 제한 시간(3시간)이 초과되었습니다.\n규정에 따라 경고 1회가 부과되며, 좌석은 즉시 반납됩니다.\n(현재 누적 경고: ${warnings}회)`;
-
             // 4. 3아웃 체크 (이용 정지)
             if (warnings >= 3) {
                 const banEndDate = Date.now() + BAN_DURATION_MS;
                 localStorage.setItem(`student_${currentId}_banDate`, banEndDate);
                 msg += `\n\n🚫 [이용 정지] 경고 3회 누적으로 2주간 이용이 제한됩니다.`;
             }
-
             // 5. 알림 띄우고 강제 퇴실 처리
             alert(msg);
             logout(false); // false: logout 함수 내의 '이용해 주셔서 감사합니다' 알림 끄기
@@ -378,17 +438,14 @@
             }
         }
     }
-
     function checkOutDurationAndProcess() {
         const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_outStartTime`));
         if (!startTime) return;
-
         const diff = Date.now() - startTime;
         if (diff > WARNING_LIMIT_MS) {
             addWarning(currentId);
         }
     }
-
     function getStudentBanInfo(id) {
         const banDateStr = localStorage.getItem(`student_${id}_banDate`);
         if (banDateStr) {
@@ -402,12 +459,10 @@
         }
         return { isBanned: false };
     }
-
     function addWarning(id) {
         let warnings = parseInt(localStorage.getItem(`student_${id}_warnings`) || "0");
         warnings++;
         localStorage.setItem(`student_${id}_warnings`, warnings);
-
         if (warnings >= 3) {
             const banEndDate = Date.now() + BAN_DURATION_MS;
             localStorage.setItem(`student_${id}_banDate`, banEndDate);
@@ -418,13 +473,11 @@
             updateWarningDisplay();
         }
     }
-
     function updateWarningDisplay() {
         const warnings = localStorage.getItem(`student_${currentId}_warnings`) || "0";
         warningCountEl.textContent = warnings;
         warningDisplay.style.display = "block";
     }
-
     function showError(msg) {
         idErrorEl.textContent = msg;
         idErrorEl.style.display = "block";
