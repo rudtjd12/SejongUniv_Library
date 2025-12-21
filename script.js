@@ -1,8 +1,12 @@
-// ============================================================
+    // ============================================================
     // [설정] 상수
     // ============================================================
     const WARNING_LIMIT_MS = 3 * 60 * 60 * 1000;
     const BAN_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
+    const BASE_USAGE_LIMIT_MS = 6 * 60 * 60 * 1000;
+    const EXTENSION_DURATION_MS = 3 * 60 * 60 * 1000;
+    const EXTENSION_WINDOW_MS = 2 * 60 * 60 * 1000;
+    const MAX_EXTENSIONS = 2;
     
     // [설정] 롤링 문구
     const nudgeMessages = [
@@ -113,6 +117,9 @@
     const statusTextEl = document.querySelector("#status span");
     const timerBox = document.getElementById("out-timer-box");
     const timerText = document.getElementById("timer-text");
+    const usageTimerBox = document.getElementById("usage-timer-box");
+    const usageTimerText = document.getElementById("usage-timer-text");
+    const extendBtn = document.getElementById("btn-extend-time");
     const warningDisplay = document.getElementById("warning-display");
 
     const controlsIn = document.getElementById("controls-in");
@@ -120,6 +127,7 @@
 
     let currentId = "";
     let timerInterval = null;
+    let usageInterval = null;
 
     // ============================================================
     // [로직 6] 초기 세팅
@@ -202,6 +210,29 @@
         }
     });
 
+    extendBtn.addEventListener("click", () => {
+        const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
+        if (!startTime) return;
+
+        const extensions = parseInt(localStorage.getItem(`seat_${seatNum}_extensions`) || "0");
+        const remaining = getUsageEndTime() - Date.now();
+
+        if (extensions >= MAX_EXTENSIONS) {
+            alert("연장은 최대 2회까지 가능합니다.");
+            return;
+        }
+
+        if (remaining > EXTENSION_WINDOW_MS) {
+            alert("남은 시간이 2시간 이하일 때만 연장할 수 있습니다.");
+            return;
+        }
+
+        const newExtensions = extensions + 1;
+        localStorage.setItem(`seat_${seatNum}_extensions`, newExtensions);
+        alert(`사용 시간이 3시간 연장되었습니다. (총 ${newExtensions}회 연장)`);
+        updateUsageTimer();
+    });
+
     // 테스트 버튼 로직
     testBtn.addEventListener("click", () => {
         const outStartKey = `seat_${seatNum}_outStartTime`;
@@ -270,6 +301,9 @@
         seatCard.style.display = "block";
         studentIdTextEl.textContent = currentId;
 
+        ensureUsageSession();
+        startUsageTimer();
+
         updateWarningDisplay();
 
         const savedStatus = localStorage.getItem(`seat_${seatNum}_status`) || "입실";
@@ -284,9 +318,12 @@
         localStorage.removeItem(`seat_${seatNum}_studentId`);
         localStorage.removeItem(`seat_${seatNum}_status`);
         localStorage.removeItem(`seat_${seatNum}_outStartTime`);
+        localStorage.removeItem(`seat_${seatNum}_startTime`);
+        localStorage.removeItem(`seat_${seatNum}_extensions`);
         localStorage.removeItem("device_active_seat");
-        
+
         if (timerInterval) clearInterval(timerInterval);
+        if (usageInterval) clearInterval(usageInterval);
         currentId = "";
 
         seatCard.style.display = "none";
@@ -326,6 +363,64 @@
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(updateTimer, 1000);
         updateTimer();
+    }
+
+    function ensureUsageSession() {
+        const startKey = `seat_${seatNum}_startTime`;
+        const extensionsKey = `seat_${seatNum}_extensions`;
+
+        if (!localStorage.getItem(startKey)) {
+            localStorage.setItem(startKey, Date.now());
+        }
+        if (!localStorage.getItem(extensionsKey)) {
+            localStorage.setItem(extensionsKey, "0");
+        }
+    }
+
+    function getUsageEndTime() {
+        const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
+        const extensions = parseInt(localStorage.getItem(`seat_${seatNum}_extensions`) || "0");
+        return startTime + BASE_USAGE_LIMIT_MS + (extensions * EXTENSION_DURATION_MS);
+    }
+
+    function startUsageTimer() {
+        if (usageInterval) clearInterval(usageInterval);
+        usageInterval = setInterval(updateUsageTimer, 1000);
+        updateUsageTimer();
+    }
+
+    function updateUsageTimer() {
+        const startTime = parseInt(localStorage.getItem(`seat_${seatNum}_startTime`));
+        if (!startTime) return;
+
+        const now = Date.now();
+        const endTime = getUsageEndTime();
+        const remaining = endTime - now;
+
+        if (remaining <= 0) {
+            clearInterval(usageInterval);
+            usageInterval = null;
+            alert("좌석 사용 제한 시간이 종료되었습니다. 자동으로 퇴실 처리됩니다.");
+            logout(false);
+            return;
+        }
+
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+        const fmt = (n) => n.toString().padStart(2, '0');
+        usageTimerText.textContent = `${fmt(hours)}:${fmt(minutes)}:${fmt(seconds)}`;
+
+        const extensions = parseInt(localStorage.getItem(`seat_${seatNum}_extensions`) || "0");
+        const canExtend = remaining <= EXTENSION_WINDOW_MS && extensions < MAX_EXTENSIONS;
+        extendBtn.disabled = !canExtend;
+        extendBtn.textContent = extensions >= MAX_EXTENSIONS ? "연장 불가" : "사용 시간 연장";
+
+        if (remaining <= EXTENSION_WINDOW_MS) {
+            usageTimerBox.style.color = "#c62828";
+        } else {
+            usageTimerBox.style.color = "#c62828";
+        }
     }
 
     function updateTimer() {
