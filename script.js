@@ -40,7 +40,7 @@ btnRow.style.width = "100%";
 // 3. [신규] 왼쪽 버튼: 연장 가능 상태 만들기
 const testBtnExtend = document.createElement("button");
 testBtnExtend.className = "btn-test"; 
-testBtnExtend.textContent = "조건 충족 (연장 ON)";
+testBtnExtend.textContent = "연장 ON";
 testBtnExtend.style.margin = "0"; 
 testBtnExtend.style.flex = "1";   
 testBtnExtend.style.background = "#1976d2"; 
@@ -49,7 +49,7 @@ testBtnExtend.style.display = "block"; // [핵심 수정] 숨김 속성 강제 �
 // 4. [신규] 오른쪽 버튼: 10초 전 만들기 (자동 퇴실)
 const testBtnExpire = document.createElement("button");
 testBtnExpire.className = "btn-test";
-testBtnExpire.textContent = "10초 전 (자동퇴실)";
+testBtnExpire.textContent = "10초 전";
 testBtnExpire.style.margin = "0";
 testBtnExpire.style.flex = "1";   
 testBtnExpire.style.background = "#d32f2f"; 
@@ -71,13 +71,13 @@ logoImg.addEventListener("click", () => {
         // 버튼들 모두 보이기
         if(testBtnOut) {
             testBtnOut.style.display = "block";
-            testBtnOut.textContent = "[개발자] 외출 시간 +3h (경고 테스트)";
+            testBtnOut.textContent = "외출 시간 +3h";
         }
         
         // 반반 컨테이너 보이기 (flex 모드)
         btnRow.style.display = "flex";
         
-        alert("🛠️ 개발자 모드 활성화: 입/퇴실 시뮬레이션 버튼이 추가되었습니다.");
+        alert("개발자 모드 활성화.");
         
         logoImg.style.transform = "scale(1.2)";
         setTimeout(() => logoImg.style.transform = "scale(1)", 200);
@@ -273,7 +273,7 @@ if(testBtnOut) {
             // [삭제됨] localStorage.setItem(..., newOutTime); 
             // ^ 이 줄을 지웠습니다! 이제 사용 타이머는 3시간이 추가되지 않습니다.
             
-            alert("⚡ [외출] 3시간 초과 상태로 변경!\n(경고 로직만 테스트합니다)");
+            // alert("⚡ [외출] 3시간 초과 상태로 변경!\n(경고 로직만 테스트합니다)");
         } else {
             alert("먼저 '외출 하기' 상태여야 합니다.");
         }
@@ -295,7 +295,7 @@ testBtnExtend.addEventListener("click", () => {
         
         localStorage.setItem(startKey, trickStartTime);
         updateUsageTimer(); 
-        alert(`⚡ [입실] 종료 2시간 전으로 이동!\n(연장 횟수 ${extensions}회 유지 / 버튼 활성화)`);
+        // alert(`⚡ [입실] 종료 2시간 전으로 이동!\n(연장 횟수 ${extensions}회 유지 / 버튼 활성화)`);
     } else {
         alert("먼저 '입실' 상태여야 합니다.");
     }
@@ -316,7 +316,7 @@ testBtnExpire.addEventListener("click", () => {
         
         localStorage.setItem(startKey, trickStartTime);
         updateUsageTimer(); 
-        alert(`⚡ [입실] 종료 10초 전입니다!\n자동 퇴실 로직을 확인하세요.`);
+        // alert(`⚡ [입실] 종료 10초 전입니다!\n자동 퇴실 로직을 확인하세요.`);
     } else {
         alert("먼저 '입실' 상태여야 합니다.");
     }
