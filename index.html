@@ -23,6 +23,7 @@
         </div>
         
         <p class="app-subtitle">스마트 좌석 배정 시스템</p>
+    @@ -26,68 +26,77 @@
     </div>
 
     <div class="card" id="id-card">
@@ -48,6 +49,11 @@
 
         <div id="status" class="status">상태: <span>입실 중</span></div>
 
+        <div id="usage-timer-box" class="timer-box" style="display:block;">
+            좌석 사용 남은 시간: <span id="usage-timer-text">--:--:--</span>
+            <div class="usage-hint">입실 후 기본 6시간, 종료 2시간 전부터 3시간씩 연장 (최대 2회)</div>
+        </div>
+
         <div id="out-timer-box" class="timer-box">
             외출 시간: <span id="timer-text">00:00:00</span>
             <div style="font-size:11px; font-weight:normal; margin-top:4px; opacity:0.8">
@@ -64,6 +70,10 @@
                 <button class="btn-primary" id="btn-return">복귀 하기</button>
                 <button class="btn-danger" id="btn-leave-out">바로 퇴실</button>
             </div>
+        </div>
+
+        <div class="btn-row" style="margin-top:6px;">
+            <button class="btn-secondary" id="btn-extend-time">사용 시간 연장</button>
         </div>
 
         <button id="btn-test-add-time" class="btn-test">
