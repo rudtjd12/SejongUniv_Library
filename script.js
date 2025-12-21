@@ -259,16 +259,21 @@ extendBtn.addEventListener("click", () => {
     updateUsageTimer();
 });
 
-// [테스트 1] 외출 시간 +3시간 (기존 버튼)
+// [수정됨] 테스트 버튼 1: 외출 시간 +3시간 (사용 시간은 건드리지 않음)
 if(testBtnOut) {
     testBtnOut.addEventListener("click", () => {
         const outStartKey = `seat_${seatNum}_outStartTime`;
         let outTime = parseInt(localStorage.getItem(outStartKey));
+        
         if (outTime) {
-            const newOutTime = Date.now() - (3 * 60 * 60 * 1000) + (5 * 1000); 
+            // 경고 로직을 속이기 위해 '외출 시작 시간'만 3시간 전으로 조작
+            const newOutTime = Date.now() - (3 * 60 * 60 * 1000) - (1000); 
             localStorage.setItem(outStartKey, newOutTime);
-            localStorage.setItem(`seat_${seatNum}_usagePauseStart`, newOutTime); 
-            alert("⚡ [외출] 3시간 초과 상태로 변경! (잠시 후 경고)");
+            
+            // [삭제됨] localStorage.setItem(..., newOutTime); 
+            // ^ 이 줄을 지웠습니다! 이제 사용 타이머는 3시간이 추가되지 않습니다.
+            
+            alert("⚡ [외출] 3시간 초과 상태로 변경!\n(경고 로직만 테스트합니다)");
         } else {
             alert("먼저 '외출 하기' 상태여야 합니다.");
         }
