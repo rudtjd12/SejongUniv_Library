@@ -36,24 +36,24 @@ btnRow.style.display = "none"; // 처음엔 숨김
 btnRow.style.gap = "10px";
 btnRow.style.marginTop = "10px";
 btnRow.style.width = "100%";
-// flex로 나란히 배치
-btnRow.style.display = "none"; // flex는 활성화될 때 설정
 
 // 3. [신규] 왼쪽 버튼: 연장 가능 상태 만들기
 const testBtnExtend = document.createElement("button");
-testBtnExtend.className = "btn-test"; // 기존 스타일 상속
+testBtnExtend.className = "btn-test"; 
 testBtnExtend.textContent = "조건 충족 (연장 ON)";
-testBtnExtend.style.margin = "0"; // 마진 제거 (컨테이너가 제어)
-testBtnExtend.style.flex = "1";   // 반반 차지
-testBtnExtend.style.background = "#1976d2"; // 파란색 계열
+testBtnExtend.style.margin = "0"; 
+testBtnExtend.style.flex = "1";   
+testBtnExtend.style.background = "#1976d2"; 
+testBtnExtend.style.display = "block"; // [핵심 수정] 숨김 속성 강제 해제!
 
 // 4. [신규] 오른쪽 버튼: 10초 전 만들기 (자동 퇴실)
 const testBtnExpire = document.createElement("button");
 testBtnExpire.className = "btn-test";
 testBtnExpire.textContent = "10초 전 (자동퇴실)";
 testBtnExpire.style.margin = "0";
-testBtnExpire.style.flex = "1";   // 반반 차지
-testBtnExpire.style.background = "#d32f2f"; // 빨간색 계열
+testBtnExpire.style.flex = "1";   
+testBtnExpire.style.background = "#d32f2f"; 
+testBtnExpire.style.display = "block"; // [핵심 수정] 숨김 속성 강제 해제!
 
 // 컨테이너에 버튼 2개 넣기
 btnRow.appendChild(testBtnExtend);
