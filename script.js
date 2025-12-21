@@ -265,7 +265,7 @@ if(testBtnOut) {
         const outStartKey = `seat_${seatNum}_outStartTime`;
         let outTime = parseInt(localStorage.getItem(outStartKey));
         if (outTime) {
-            const newOutTime = Date.now() - (3 * 60 * 50 * 1000) - (1000); 
+            const newOutTime = Date.now() - (3 * 60 * 60 * 1000) + (5 * 1000); 
             localStorage.setItem(outStartKey, newOutTime);
             localStorage.setItem(`seat_${seatNum}_usagePauseStart`, newOutTime); 
             alert("⚡ [외출] 3시간 초과 상태로 변경! (잠시 후 경고)");
