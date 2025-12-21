@@ -239,7 +239,7 @@ if(testBtnOut) {
         const outStartKey = `seat_${seatNum}_outStartTime`;
         let outTime = parseInt(localStorage.getItem(outStartKey));
         if (outTime) {
-            const newOutTime = Date.now() - (3 * 60 * 60 * 1000) - (1000); 
+            const newOutTime = Date.now() - (3 * 60 * 60 * 1000) - (10 * 1000); 
             localStorage.setItem(outStartKey, newOutTime);
             // 외출 시작 시간도 같이 조작해줘야 타이머 정지 기능이 안 꼬임
             localStorage.setItem(`seat_${seatNum}_usagePauseStart`, newOutTime); 
@@ -253,12 +253,23 @@ if(testBtnOut) {
 // [수정됨] 테스트 버튼 2: 사용 시간만 -4시간
 testBtnUsage.addEventListener("click", () => {
     const startKey = `seat_${seatNum}_startTime`;
+    const extKey = `seat_${seatNum}_extensions`;
+
     if (localStorage.getItem(startKey)) {
-        // 4시간 1분 전 입실한 걸로 조작
-        const trickStartTime = Date.now() - (4 * 60 * 60 * 1000) - (1 * 60 * 1000);
+        // 1. 현재 나의 총 이용 가능한 시간 계산 (기본 6시간 + 연장된 시간)
+        const extensions = parseInt(localStorage.getItem(extKey) || "0");
+        const totalDuration = BASE_USAGE_LIMIT_MS + (extensions * EXTENSION_DURATION_MS);
+        
+        // 2. 목표: "남은 시간을 딱 1시간 59분(약 2시간)으로 만들자"
+        // 공식: 입실시간 = 현재시간 - (총시간 - 목표남은시간)
+        const targetRemaining = 1 * 60 * 60 * 1000 + 59 * 60 * 1000; // 1시간 59분
+        const trickStartTime = Date.now() - (totalDuration - targetRemaining);
+        
+        // 3. 적용
         localStorage.setItem(startKey, trickStartTime);
-        updateUsageTimer(); 
-        alert("⚡ [사용] 입실 4시간 경과 상태로 변경했습니다.\n이제 '시간 연장' 버튼이 활성화됩니다.");
+        
+        updateUsageTimer(); // 화면 즉시 갱신
+        alert(`⚡ [테스트] 현재 연장 횟수(${extensions}회) 유지!\n종료 1시간 59분 전으로 시간이동했습니다.\n(연장 버튼이 활성화됩니다)`);
     } else {
         alert("먼저 '입실' 상태여야 합니다.");
     }
@@ -343,7 +354,7 @@ function setInStatus(save = true) {
         
         if (oldStartTime) {
             localStorage.setItem(`seat_${seatNum}_startTime`, oldStartTime + pausedDuration);
-            alert(`⏳ 외출 시간(${Math.round(pausedDuration/1000/60)}분)만큼 좌석 사용 시간이 연장되었습니다.`);
+            // alert(`⏳ 외출 시간(${Math.round(pausedDuration/1000/60)}분)만큼 좌석 사용 시간이 연장되었습니다.`);
         }
         localStorage.removeItem(`seat_${seatNum}_usagePauseStart`);
     }
@@ -465,7 +476,7 @@ function updateUsageTimer() {
     } else if (remaining > EXTENSION_WINDOW_MS) {
         extendBtn.textContent = "사용 시간 연장";
     } else {
-        extendBtn.textContent = "사용 시간 연장 (가능)";
+        extendBtn.textContent = "사용 시간 연장";
     }
 
     if (!isPaused && remaining <= EXTENSION_WINDOW_MS) {
